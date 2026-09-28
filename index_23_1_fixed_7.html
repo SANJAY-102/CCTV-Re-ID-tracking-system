@@ -1,0 +1,3903 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>AI CCTV Re-ID Tracker (Authoritative Physical Identity Ownership Engine)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #050505;
+      color: #eee;
+      font-size: 14px;
+    }
+
+    /* ---- Video Area ---- */
+    #videoWrap {
+      position: relative;
+      width: 100%;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 340px;
+      max-height: 62vh;
+      overflow: hidden;
+    }
+
+    video {
+      display: none;
+    }
+
+    #overlay {
+      width: 100%;
+      height: 100%;
+      display: block;
+      max-height: 62vh;
+      object-fit: contain;
+      background: #000;
+    }
+
+    /* ---- Status Bar ---- */
+    #statusBar {
+      background: #111;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: #aaa;
+      border-bottom: 1px solid #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #status {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    #modelBadges {
+      display: flex;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .mbadge {
+      color: #666;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      font-weight: 600;
+    }
+
+    .mbadge.ready {
+      color: #2ed573;
+      border-color: #2ed573;
+      background: rgba(46, 213, 115, 0.12);
+    }
+
+    .mbadge.loading {
+      color: #ffa502;
+      border-color: #ffa502;
+      background: rgba(255, 165, 2, 0.12);
+    }
+
+    .mbadge.error {
+      color: #ff4757;
+      border-color: #ff4757;
+      background: rgba(255, 71, 87, 0.12);
+    }
+
+    /* ---- Upload & Actions ---- */
+    #uploadBar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: #0a0a0a;
+      border-bottom: 1px solid #222;
+      flex-wrap: wrap;
+    }
+
+    #uploadLabel {
+      background: #0a3d62;
+      color: #eee;
+      border: 1px solid #1e6fa8;
+      border-radius: 6px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #uploadLabel:hover {
+      background: #104f7e;
+    }
+
+    #uploadLabel:active {
+      opacity: .7;
+    }
+
+    #videoUpload {
+      display: none;
+    }
+
+    #uploadName {
+      font-size: 12px;
+      color: #888;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ---- Controls Bar ---- */
+    #controls {
+      display: flex;
+      gap: 10px;
+      padding: 12px 14px;
+      background: #111;
+      border-bottom: 1px solid #222;
+      align-items: center;
+    }
+
+    #btnMainAction {
+      background: linear-gradient(135deg, #10ac84, #1dd1a1);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(29, 209, 161, 0.3);
+      transition: all 0.15s ease;
+    }
+
+    #btnMainAction:hover {
+      filter: brightness(1.1);
+    }
+
+    #btnMainAction:active {
+      transform: scale(0.99);
+    }
+
+    #btnMainAction.running {
+      background: linear-gradient(135deg, #ee5253, #ff6b6b);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(238, 82, 83, 0.35);
+    }
+
+    #btnMainAction.paused {
+      background: linear-gradient(135deg, #ff9f43, #feca57);
+      color: #000;
+      box-shadow: 0 4px 14px rgba(255, 159, 67, 0.35);
+    }
+
+    #btnReset {
+      background: #222;
+      color: #bbb;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #btnReset:hover {
+      background: #333;
+      color: #fff;
+    }
+
+    #btnClearIdentities {
+      background: #2a1414;
+      color: #ff8a8a;
+      border: 1px solid #4a1f1f;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #btnClearIdentities:hover {
+      background: #3a1a1a;
+      color: #ff4757;
+    }
+
+    /* ---- Video Processing Progress Bar ---- */
+    #progressBarWrap {
+      display: none;
+      padding: 10px 14px;
+      background: #0a0a0a;
+      border-bottom: 1px solid #222;
+    }
+
+    #progressBarWrap.active {
+      display: block;
+    }
+
+    #progressBarLabel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #aaa;
+      margin-bottom: 6px;
+      font-family: monospace;
+    }
+
+    #progressBarText {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    #progressBarStatus {
+      color: #1dd1a1;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    #progressBarTrack {
+      position: relative;
+      width: 100%;
+      height: 9px;
+      background: #1e1e1e;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    #progressBarFill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10ac84, #1dd1a1, #00d2d3);
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(29, 209, 161, 0.45);
+      transition: width 0.1s linear;
+    }
+
+    /* ---- Stats Row ---- */
+    #statsRow {
+      display: flex;
+      gap: 0;
+      background: #111;
+      border-bottom: 1px solid #222;
+    }
+
+    .stat {
+      flex: 1;
+      text-align: center;
+      padding: 10px 4px;
+      border-right: 1px solid #222;
+    }
+
+    .stat:last-child {
+      border-right: none;
+    }
+
+    .stat .k {
+      font-size: 9px;
+      color: #777;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .stat .v {
+      font-size: 18px;
+      font-weight: 700;
+      color: #eee;
+      margin-top: 2px;
+    }
+
+    .stat .v.in {
+      color: #2ed573;
+    }
+
+    .stat .v.out {
+      color: #ff4757;
+    }
+
+    /* ---- Export Bar ---- */
+    #exportBar {
+      display: flex;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #0d1117;
+      border-bottom: 1px solid #222;
+      flex-wrap: wrap;
+    }
+
+    .expBtn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #c9d1d9;
+      flex: 1;
+      text-align: center;
+    }
+
+    .expBtn:hover:not(:disabled) {
+      background: #30363d;
+      color: #fff;
+    }
+
+    .expBtn.download {
+      background: #0f3d2e;
+      border-color: #1dd1a1;
+      color: #1dd1a1;
+    }
+
+    .expBtn.download:hover:not(:disabled) {
+      background: #155741;
+      color: #fff;
+    }
+
+    .expBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      border-color: #333;
+      color: #777;
+    }
+
+    /* ---- Attendance & Gallery Lists ---- */
+    #contentGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 12px 14px;
+    }
+
+    @media(max-width:768px) {
+      #contentGrid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .panel h3 {
+      font-size: 11px;
+      color: #777;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #empList {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .empRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #181818;
+      border-radius: 6px;
+      border: 1px solid #2a2a2a;
+    }
+
+    .empRow img {
+      width: 36px;
+      height: 46px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #000;
+      flex-shrink: 0;
+    }
+
+    .empRow .eid {
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 14px;
+      color: #70a1ff;
+    }
+
+    .empRow .estat {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .empRow .estat.in {
+      background: rgba(46, 213, 115, .18);
+      color: #2ed573;
+    }
+
+    .empRow .estat.out {
+      background: rgba(255, 71, 87, .18);
+      color: #ff4757;
+    }
+
+    .empRow .estat.lost {
+      background: rgba(255, 165, 2, .18);
+      color: #ffa502;
+    }
+
+    .empRow .emeta {
+      font-size: 11px;
+      color: #888;
+      margin-left: auto;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    #eventLog {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 4px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .evtRow {
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: #bbb;
+      background: #161616;
+    }
+
+    .evtRow .et {
+      color: #666;
+      font-size: 10px;
+      font-family: monospace;
+      min-width: 54px;
+    }
+
+    .evtRow .tag {
+      font-weight: 700;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .tag.enter {
+      background: rgba(79, 140, 255, .2);
+      color: #4f8cff;
+    }
+
+    .tag.exit {
+      background: rgba(255, 71, 87, .2);
+      color: #ff4757;
+    }
+
+    .tag.reenter {
+      background: rgba(46, 213, 115, .2);
+      color: #2ed573;
+    }
+
+    .tag.recover {
+      background: rgba(46, 213, 115, .3);
+      color: #2ed573;
+    }
+
+    .tag.blocked {
+      background: rgba(255, 71, 87, .3);
+      color: #ff4757;
+    }
+
+    .tag.enroll {
+      background: rgba(155, 89, 182, .3);
+      color: #9b59b6;
+    }
+
+    .evtRow .emp {
+      font-family: monospace;
+      font-weight: 700;
+      color: #eee;
+    }
+
+    .emptyNotice {
+      font-size: 12px;
+      color: #555;
+      padding: 16px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Video feed -->
+  <div id="videoWrap">
+    <video id="video" playsinline muted preload="auto"></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <!-- Status bar -->
+  <div id="statusBar">
+    <span id="status">Initializing AI models…</span>
+    <div id="modelBadges">
+      <span class="mbadge" id="yoloBadge">YOLO</span>
+      <span class="mbadge" id="resnetBadge">ReID</span>
+    </div>
+  </div>
+
+  <!-- Video Upload Bar -->
+  <div id="uploadBar">
+    <label id="uploadLabel" for="videoUpload">📁 Load Any CCTV Video</label>
+    <input type="file" id="videoUpload" accept="video/*">
+    <span id="uploadName">No video loaded. Click "Load Any CCTV Video" to begin.</span>
+  </div>
+
+  <!-- Main Action Buttons -->
+  <div id="controls">
+    <button id="btnMainAction">▶ Start Video Tracking</button>
+    <button id="btnReset">↺ Reset</button>
+    <button id="btnClearIdentities"
+      title="Permanently deletes all enrolled physical identities from persistent storage">🗑 Clear All
+      Identities</button>
+  </div>
+  <div id="persistNotice"
+    style="padding:6px 14px;font-size:11px;color:#666;background:#0a0a0a;border-bottom:1px solid #1a1a1a;">
+    Physical identities (EMP IDs) are saved to this browser and survive page refresh. "Reset" only clears the live
+    tracking session.
+  </div>
+
+  <!-- Video Processing Progress Bar -->
+  <div id="progressBarWrap">
+    <div id="progressBarLabel">
+      <span id="progressBarText">0% · 00:00 / 00:00 (Frame 0)</span>
+      <span id="progressBarStatus">Ready</span>
+    </div>
+    <div id="progressBarTrack">
+      <div id="progressBarFill"></div>
+    </div>
+  </div>
+
+  <!-- Key Stats Row -->
+  <div id="statsRow">
+    <div class="stat">
+      <div class="k">FPS</div>
+      <div class="v" id="statFps">0</div>
+    </div>
+    <div class="stat">
+      <div class="k">Visible</div>
+      <div class="v" id="statPeople">0</div>
+    </div>
+    <div class="stat">
+      <div class="k">Total Enrolled</div>
+      <div class="v" id="statTotal">0</div>
+    </div>
+    <div class="stat">
+      <div class="k">Active IN</div>
+      <div class="v in" id="statIn">0</div>
+    </div>
+    <div class="stat">
+      <div class="k">Active OUT</div>
+      <div class="v out" id="statOut">0</div>
+    </div>
+  </div>
+
+  <!-- Export Reports Bar -->
+  <div id="exportBar">
+    <button class="expBtn download" id="btnDownloadVideo" disabled>🎬 Download Processed Video (.mp4) (available after
+      run completes)</button>
+    <button class="expBtn" id="btnExportAttendanceCsv">📊 Download Attendance CSV</button>
+    <button class="expBtn" id="btnExportEventCsv">⏱ Download Events CSV</button>
+  </div>
+
+  <!-- Attendance & Event Grid -->
+  <div id="contentGrid">
+    <div class="panel">
+      <h3>Authoritative Physical Person Attendance <span id="empCountBadge" style="color:#2ed573;">0 IN</span></h3>
+      <div id="empList">
+        <div class="emptyNotice" id="empEmpty">No employees detected yet.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Physical Identity Event Audit Log <span id="eventCountBadge" style="color:#70a1ff;">0 Events</span></h3>
+      <div id="eventLog">
+        <div class="emptyNotice" id="evtEmpty">No events logged yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONNX Runtime Web -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+  <script>
+    /* =========================================================================
+       DATABASE-BACKED MULTI-SAMPLE CCTV TRACKING & RE-ID IDENTITY ENGINE
+       =========================================================================
+       Pipeline Stages:
+       1. PersonDetector     -> Pure Person Detection (YOLOv8 ONNX)
+       2. MultiObjectTracker -> Spatial-Temporal Tracking (ByteTrack Kalman)
+       3. SnapshotCollector  -> Quality & Diversity Snapshot Gating
+       4. ReIDExtractor      -> Normalized Feature Extraction (Person-ReID ONNX)
+       5. IdentityDatabase   -> Multi-Sample Person Profiles & Anti-Contamination
+       6. IdentityManager    -> Multi-Sample Consistency Confirmation (3-Way)
+       7. AttendanceManager  -> Independent Presence & Dwell Time
+       8. CanvasRenderer     -> Passive Visual Rendering
+       9. EventSystem        -> Audit Logging
+       ========================================================================= */
+
+    const YOLO_MODEL_URLS = [
+      "https://huggingface.co/Shad0ws/yolov8onnx/resolve/main/yolov8n.onnx",
+      "https://huggingface.co/SpotLab/YOLOv8Detection/resolve/3005c6751fb19cdeb6b10c066185908faf66a097/yolov8n.onnx"
+    ];
+
+    const REID_MODEL_URLS = [
+      "https://huggingface.co/opencv/person_reid_youtureid/resolve/main/person_reid_youtu_2021nov.onnx",
+      "https://huggingface.co/opencv/person_reid_youtureid/resolve/main/person_reid_youtu_2021nov_int8.onnx"
+    ];
+
+    const YOLO_INPUT_SIZE = 640;
+    const REID_INPUT_WIDTH = 128;
+    const REID_INPUT_HEIGHT = 256;
+    const REID_MEAN = [0.485, 0.456, 0.406];
+    const REID_STD = [0.229, 0.224, 0.225];
+
+    // Detection & Tracking Gating (ByteTrack Two-Stage + Global Hungarian Association)
+    const DETECTION_CONFIDENCE = 0.12;       // Lowered — overhead CCTV compresses person appearance, depressing YOLO confidence
+    const MIN_PERSON_WIDTH = 20;             // Lowered from 28 — overhead view makes people appear narrower
+    const MIN_PERSON_HEIGHT = 40;            // Lowered from 60 — overhead angle makes standing people appear shorter
+    const TRACK_HIGH_CONF = 0.50;            // Stage 1 high-confidence association threshold
+    const TRACK_LOW_CONF = 0.20;             // Stage 2 ByteTrack low-confidence recovery threshold (lowered from 0.25)
+    const MAX_LOST_FRAMES = 300;             // 300 frames (~10 seconds at 30fps) — person may walk away for several seconds before returning
+    const GHOST_MAX_AGE_FRAMES = 900;        // 900 frames (~30 seconds) — ghost memory must outlive a walk-away-and-return trip
+    const MAX_PIXEL_DISTANCE = 18;           // Tightened spatial distance threshold for ghost recovery (px: was 25)
+    const GHOST_MAX_RADIUS_CEILING = 25;     // Hard ceiling on ghost spatial radius to prevent adjacent desk overlap
+    const MAX_REID_DESK_DISTANCE = 60;       // Hard max distance threshold for Re-ID desk anchor matching (px)
+
+    // Sticky Identity & Re-ID Thresholds
+    const REID_MIN_CONFIDENCE_THRESHOLD = 0.48;  // Lowered from 0.58 — sit/stand/walk pose changes compress cosine similarity in overhead CCTV
+    const CROSSING_HIGH_SIM = 0.55;          // Strong confirmation during crossing
+    const CROSSING_MEDIUM_SIM = 0.42;        // Ambiguous threshold (mark UNCERTAIN, do NOT swap)
+    const CROSSING_SWAP_MARGIN = 0.08;       // How much better the OTHER profile must match before we correct a crossing swap
+    const CROSSING_SWAP_MARGIN_OCCLUDED = 0.03; // Tighter margin used when the track is heavily occluded/intersecting — similar clothing compresses the similarity gap even on a real swap
+    const PERSISTENT_CONFLICT_THRESHOLD = 5; // Consecutive low-sim conflicts while occluded before in-place swap check
+    const GHOST_RECOVERY_MIN_SIM = 0.44;     // Lowered from 0.55 — pose changes (sit→stand→walk) dramatically compress cosine similarity
+    const DESK_GRAVITY_RADIUS = 50;          // Widened from 35px to account for chair
+    const DESK_GRAVITY_MAX_SPEED = 2.0;      // Desk-anchor bonus disabled above this speed — a fast-moving track is walking past, not settling at, the desk
+    const DESK_GRAVITY_MIN_CONFIDENCE = 0.42;// Lowered from 0.48 — overhead pose changes need more tolerance
+    const DESK_GRAVITY_FLOOR_SIM = 0.38;     // Absolute floor even inside the well (lowered from 0.40)
+    const DESK_GRAVITY_COST_DISCOUNT = 0.35; // Flat cost credit applied inside the well
+
+    // Gallery Protection & Auto-Enrollment Thresholds
+    const GALLERY_MAX_SAMPLES = 15;           // Rolling bank of multi-pose embeddings per employee
+    const GALLERY_CONTAMINATION_FLOOR = 0.55; // Lowered from 0.60 — overhead sit/stand changes reduce self-similarity
+    const RECOVERY_STABLE_FRAMES = 6;         // Lowered from 15 — build gallery faster to capture diverse poses early
+    const IDENTITY_CONFIRM_FRAMES = 2;        // Fast 2 frames to reach candidate maturity
+    const IDENTITY_STALL_BREAKER_FRAMES = 8;  // Fast 8 frames (~0.25s) — if adjacent desk boxes touch, force maturity quickly
+    const SNAPSHOT_MIN_SCORE = 0.40;         // Lowered from 0.45 — ensure all detected employees qualify for snapshot collection
+    const SNAPSHOT_MIN_W = 20;               // Lowered from 30 — consistent with MIN_PERSON_WIDTH
+    const SNAPSHOT_MIN_H = 42;               // Lowered from 65 — consistent with MIN_PERSON_HEIGHT
+    const SNAPSHOT_MAX_PER_TRACKLET = 6;
+    const SNAPSHOT_DIVERSITY_MAX_SIM = 0.92;  // Reject near-identical consecutive frames
+    const REID_REJECT_SIM = 0.40;             // Upper bound to qualify candidate as DEFINITELY_NEW
+    const MAX_ENROLLED_EMPLOYEES = 15;        // Increased from 6 to 15 (office has 7+ visible employees)
+
+    // Explicit Identity State Machine
+    const IDENTITY_STATES = {
+      UNKNOWN: 'UNKNOWN',
+      CANDIDATE: 'CANDIDATE',
+      CONFIRMED: 'CONFIRMED',
+      CROSSING_LOCK: 'CROSSING_LOCK',
+      UNCERTAIN: 'UNCERTAIN',
+      LOST: 'LOST'
+    };
+
+    // Global References
+    let yoloSession = null;
+    let reidSession = null;
+    let yoloOutputPlan = null;
+    let modelsReady = false;
+
+    // Pipeline Components
+    let detector = null;
+    let tracker = null;
+    let snapshotCollector = null;
+    let reidExtractor = null;
+    let identityPersistence = null;
+    let identityDatabase = null;
+    let identityManager = null;
+    let attendanceManager = null;
+    let renderer = null;
+    let eventSystem = null;
+    // Video Recording (processed output with overlays)
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let processedVideoUrl = null;
+    let processedVideoBlob = null;
+    let recordingMimeType = '';
+
+    const els = {
+      status: document.getElementById('status'),
+      video: document.getElementById('video'),
+      overlay: document.getElementById('overlay'),
+      btnMainAction: document.getElementById('btnMainAction'),
+      btnReset: document.getElementById('btnReset'),
+      btnClearIdentities: document.getElementById('btnClearIdentities'),
+      btnDownloadVideo: document.getElementById('btnDownloadVideo'),
+      progressBarWrap: document.getElementById('progressBarWrap'),
+      progressBarFill: document.getElementById('progressBarFill'),
+      progressBarText: document.getElementById('progressBarText'),
+      progressBarStatus: document.getElementById('progressBarStatus'),
+      videoUpload: document.getElementById('videoUpload'),
+      uploadName: document.getElementById('uploadName'),
+      btnExportAttendanceCsv: document.getElementById('btnExportAttendanceCsv'),
+      btnExportEventCsv: document.getElementById('btnExportEventCsv'),
+      statFps: document.getElementById('statFps'),
+      statPeople: document.getElementById('statPeople'),
+      statTotal: document.getElementById('statTotal'),
+      statIn: document.getElementById('statIn'),
+      statOut: document.getElementById('statOut'),
+      empList: document.getElementById('empList'),
+      empEmpty: document.getElementById('empEmpty'),
+      eventLog: document.getElementById('eventLog'),
+      evtEmpty: document.getElementById('evtEmpty'),
+      empCountBadge: document.getElementById('empCountBadge'),
+      eventCountBadge: document.getElementById('eventCountBadge'),
+      yoloBadge: document.getElementById('yoloBadge'),
+      resnetBadge: document.getElementById('resnetBadge'),
+    };
+
+    function setModelStatus(which, state) {
+      const badgeEl = which === 'yolo' ? els.yoloBadge : els.resnetBadge;
+      if (badgeEl) {
+        badgeEl.classList.remove('ready', 'loading', 'error');
+        badgeEl.classList.add(state);
+      }
+    }
+    function setStatus(msg) { if (els.status) els.status.textContent = msg; console.log('[status]', msg); }
+
+    // =========================================================================
+    // MATH & GEOMETRIC UTILITIES
+    // =========================================================================
+    function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+    function iou(a, b) {
+      const x1 = Math.max(a.x1, b.x1), y1 = Math.max(a.y1, b.y1);
+      const x2 = Math.min(a.x2, b.x2), y2 = Math.min(a.y2, b.y2);
+      const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+      const areaA = (a.x2 - a.x1) * (a.y2 - a.y1), areaB = (b.x2 - b.x1) * (b.y2 - b.y1);
+      return inter / (areaA + areaB - inter + 1e-6);
+    }
+
+    function ioMin(a, b) {
+      const x1 = Math.max(a.x1, b.x1), y1 = Math.max(a.y1, b.y1);
+      const x2 = Math.min(a.x2, b.x2), y2 = Math.min(a.y2, b.y2);
+      const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+      const areaA = (a.x2 - a.x1) * (a.y2 - a.y1), areaB = (b.x2 - b.x1) * (b.y2 - b.y1);
+      return inter / (Math.min(areaA, areaB) + 1e-6);
+    }
+
+    function smoothBbox(prevBox, newBox, alpha = 0.80) {
+      if (!prevBox) return { ...newBox };
+      return {
+        x1: alpha * newBox.x1 + (1 - alpha) * prevBox.x1,
+        y1: alpha * newBox.y1 + (1 - alpha) * prevBox.y1,
+        x2: alpha * newBox.x2 + (1 - alpha) * prevBox.x2,
+        y2: alpha * newBox.y2 + (1 - alpha) * prevBox.y2,
+      };
+    }
+
+    function cosineSim(a, b) {
+      if (!a || !b) return 0;
+      let dot = 0;
+      for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+      return dot;
+    }
+
+    function computeWeightedCentroid(samples) {
+      if (!samples || samples.length === 0) return null;
+      const dim = samples[0].embedding.length;
+      const centroid = new Float32Array(dim);
+      let totalWeight = 0;
+      for (const s of samples) {
+        if (!s || !s.embedding) continue;
+        const w = s.qualityScore || 1.0;
+        totalWeight += w;
+        for (let k = 0; k < dim; k++) centroid[k] += s.embedding[k] * w;
+      }
+      if (totalWeight <= 0) return null;
+      let norm = 0;
+      for (let k = 0; k < dim; k++) {
+        centroid[k] /= totalWeight;
+        norm += centroid[k] * centroid[k];
+      }
+      norm = Math.sqrt(norm) || 1e-9;
+      for (let k = 0; k < dim; k++) centroid[k] /= norm;
+      return centroid;
+    }
+
+    function fmtClock(ms) {
+      if (!ms) return '—';
+      return new Date(ms).toLocaleTimeString([], { hour12: false });
+    }
+    function fmtVideoTime(sec) {
+      if (!isFinite(sec)) sec = 0;
+      const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+      return String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
+    }
+    function fmtDuration(ms) {
+      const s = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+      return String(h).padStart(2, '0') + ":" + String(m).padStart(2, '0') + ":" + String(sec).padStart(2, '0');
+    }
+
+    // Hungarian Bipartite Matching Algorithm (Linear Sum Assignment)
+    function solveHungarian(costMatrix) {
+      const n = costMatrix.length;
+      if (n === 0) return [];
+      const m = costMatrix[0].length;
+      if (m === 0) return [];
+
+      const dim = Math.max(n, m);
+      const matrix = Array.from({ length: dim }, (_, r) =>
+        Array.from({ length: dim }, (_, c) => (r < n && c < m ? costMatrix[r][c] : 1e6))
+      );
+
+      const u = new Float64Array(dim + 1);
+      const v = new Float64Array(dim + 1);
+      const p = new Int32Array(dim + 1);
+      const way = new Int32Array(dim + 1);
+
+      for (let i = 1; i <= dim; i++) {
+        p[0] = i;
+        let j0 = 0;
+        const minv = new Float64Array(dim + 1).fill(Infinity);
+        const used = new Uint8Array(dim + 1);
+        do {
+          used[j0] = 1;
+          const i0 = p[j0];
+          let delta = Infinity;
+          let j1 = 0;
+          for (let j = 1; j <= dim; j++) {
+            if (!used[j]) {
+              const cur = matrix[i0 - 1][j - 1] - u[i0] - v[j];
+              if (cur < minv[j]) {
+                minv[j] = cur;
+                way[j] = j0;
+              }
+              if (minv[j] < delta) {
+                delta = minv[j];
+                j1 = j;
+              }
+            }
+          }
+          for (let j = 0; j <= dim; j++) {
+            if (used[j]) {
+              u[p[j]] += delta;
+              v[j] -= delta;
+            } else {
+              minv[j] -= delta;
+            }
+          }
+          j0 = j1;
+        } while (p[j0] !== 0);
+
+        do {
+          const j1 = way[j0];
+          p[j0] = p[j1];
+          j0 = j1;
+        } while (j0 !== 0);
+      }
+
+      const assignments = [];
+      for (let j = 1; j <= m; j++) {
+        if (p[j] > 0 && p[j] <= n) {
+          const row = p[j] - 1;
+          const col = j - 1;
+          assignments.push({ row, col, cost: costMatrix[row][col] });
+        }
+      }
+      return assignments;
+    }
+
+    // =========================================================================
+    // 1. PERSON DETECTOR (YOLOv8 ONNX)
+    // =========================================================================
+    class PersonDetector {
+      constructor(session, outputPlan) {
+        this.session = session;
+        this.outputPlan = outputPlan;
+        this.sharedCanvas = null;
+      }
+
+      async detect(videoEl) {
+        const vw = videoEl.videoWidth || 640;
+        const vh = videoEl.videoHeight || 480;
+        if (!this.sharedCanvas || this.sharedCanvas.width !== vw || this.sharedCanvas.height !== vh) {
+          this.sharedCanvas = document.createElement('canvas');
+          this.sharedCanvas.width = vw;
+          this.sharedCanvas.height = vh;
+        }
+        const sctx = this.sharedCanvas.getContext('2d');
+        sctx.drawImage(videoEl, 0, 0, vw, vh);
+
+        const { canvas: lb, scale, padX, padY } = letterbox(this.sharedCanvas, YOLO_INPUT_SIZE);
+        const chw = canvasToCHWFloatRGB(lb, null, null);
+        const inputTensor = new ort.Tensor('float32', chw, [1, 3, YOLO_INPUT_SIZE, YOLO_INPUT_SIZE]);
+        const results = await this.session.run({ [this.session.inputNames[0]]: inputTensor });
+
+        const data = results[this.outputPlan.outputName].data;
+        const { channelsFirst, numChannels, numBoxes } = this.outputPlan;
+        const at = channelsFirst ? (c, i) => data[c * numBoxes + i] : (c, i) => data[i * numChannels + c];
+
+        const candidates = [];
+        const numClasses = numChannels - 4;
+        for (let i = 0; i < numBoxes; i++) {
+          const rawPerson = at(4, i);
+          const personScore = (rawPerson >= 0 && rawPerson <= 1) ? rawPerson : sigmoid(rawPerson);
+          if (personScore < DETECTION_CONFIDENCE) continue;
+
+          let maxOtherScore = 0;
+          for (let c = 1; c < numClasses; c++) {
+            const raw = at(4 + c, i);
+            const s = (raw >= 0 && raw <= 1) ? raw : sigmoid(raw);
+            if (s > maxOtherScore) maxOtherScore = s;
+          }
+
+          if (maxOtherScore >= personScore) continue;
+          if (personScore < 0.60 && (personScore - maxOtherScore) < 0.03) continue;
+
+          const cx = at(0, i), cy = at(1, i), bw = at(2, i), bh = at(3, i);
+          let x1 = (cx - bw / 2 - padX) / scale, y1 = (cy - bh / 2 - padY) / scale;
+          let x2 = (cx + bw / 2 - padX) / scale, y2 = (cy + bh / 2 - padY) / scale;
+
+          x1 = Math.max(0, Math.min(vw, x1));
+          y1 = Math.max(0, Math.min(vh, y1));
+          x2 = Math.max(0, Math.min(vw, x2));
+          y2 = Math.max(0, Math.min(vh, y2));
+
+          const w = x2 - x1, h = y2 - y1;
+          if (w < MIN_PERSON_WIDTH || h < MIN_PERSON_HEIGHT) continue;
+          if (w * h < 700) continue;          // Lowered from 1200 — overhead/distant persons have smaller pixel footprint
+          const aspect = h / Math.max(1, w);
+          // Overhead CCTV cameras see people more from above, making them appear
+          // wider relative to their height → aspect ratio can drop below 0.45.
+          // A standing person viewed from 45° overhead can have h/w ≈ 0.25-0.35.
+          if (aspect < 0.22 || aspect > 5.0) continue;
+
+          candidates.push({ bbox: { x1, y1, x2, y2 }, score: personScore, classId: 0 });
+        }
+
+        candidates.sort((a, b) => b.score - a.score);
+        if (window.DEBUG_SHOW_RAW_CANDIDATES) console.log('[RAW-CANDIDATES]', candidates.map(c =>
+          `score=${c.score.toFixed(2)} box=(${Math.round(c.bbox.x1)},${Math.round(c.bbox.y1)})-(${Math.round(c.bbox.x2)},${Math.round(c.bbox.y2)}) ` +
+          `w=${Math.round(c.bbox.x2 - c.bbox.x1)} h=${Math.round(c.bbox.y2 - c.bbox.y1)} aspect=${((c.bbox.y2 - c.bbox.y1) / Math.max(1, c.bbox.x2 - c.bbox.x1)).toFixed(2)}`
+        ));
+        const kept = [];
+        for (const b of candidates) {
+          let overlap = false;
+          for (const k of kept) {
+            if (iou(b.bbox, k.bbox) > 0.55 || ioMin(b.bbox, k.bbox) > 0.80) {
+              overlap = true;
+              break;
+            }
+          }
+          if (!overlap) kept.push(b);
+        }
+
+        if (kept.length > 0) {
+          console.log(`[DETECT] Found ${kept.length} persons (${kept.filter(d => d.score >= TRACK_HIGH_CONF).length} high conf)`);
+        }
+
+        return { detections: kept, srcCanvas: this.sharedCanvas };
+      }
+    }
+
+    // =========================================================================
+    // 2. SOTA MULTI-OBJECT TRACKER (ByteTrack + Deep SORT + BoT-SORT + OC-SORT)
+    // =========================================================================
+    class Kalman1D {
+      constructor(x0) {
+        this.x = [x0, 0];
+        this.P = [[1, 0], [0, 1]];
+        this.Q = [[0.3, 0], [0, 0.3]];
+        this.R = 2.5;
+      }
+      predict() {
+        this.x = [this.x[0] + this.x[1], this.x[1] * 0.95];
+        this.P = [
+          [this.P[0][0] + this.P[1][0] + this.P[0][1] + this.P[1][1] + this.Q[0][0], this.P[0][1] + this.P[1][1]],
+          [this.P[1][0] + this.P[1][1], this.P[1][1] + this.Q[1][1]]
+        ];
+        return this.x[0];
+      }
+      update(z) {
+        const S = this.P[0][0] + this.R;
+        const K0 = this.P[0][0] / S, K1 = this.P[1][0] / S;
+        const y = z - this.x[0];
+        this.x = [this.x[0] + K0 * y, this.x[1] + K1 * y];
+        this.P = [[(1 - K0) * this.P[0][0], (1 - K0) * this.P[0][1]], [this.P[1][0] - K1 * this.P[0][0], this.P[1][1] - K1 * this.P[0][1]]];
+      }
+    }
+
+    class BoxKalman {
+      constructor(box) {
+        const cx = (box.x1 + box.x2) / 2, cy = (box.y1 + box.y2) / 2, w = box.x2 - box.x1, h = box.y2 - box.y1;
+        this.kx = new Kalman1D(cx);
+        this.ky = new Kalman1D(cy);
+        this.kw = new Kalman1D(w);
+        this.kh = new Kalman1D(h);
+        this.lastW = w; this.lastH = h;
+      }
+      predict() {
+        const cx = this.kx.predict(), cy = this.ky.predict();
+        let w = Math.max(MIN_PERSON_WIDTH, this.kw.predict());
+        let h = Math.max(MIN_PERSON_HEIGHT, this.kh.predict());
+        // Allow up to 2.5x height expansion (sit-to-stand can nearly double a
+        // seated box's height very suddenly) / 0.20x contraction, so ByteTrack
+        // doesn't mistake a legitimate stand-up for a broken track.
+        w = Math.max(this.lastW * 0.20, Math.min(this.lastW * 2.00, w));
+        h = Math.max(this.lastH * 0.20, Math.min(this.lastH * 2.50, h));
+        return { x1: cx - w / 2, y1: cy - h / 2, x2: cx + w / 2, y2: cy + h / 2 };
+      }
+      update(box) {
+        const cx = (box.x1 + box.x2) / 2, cy = (box.y1 + box.y2) / 2, w = box.x2 - box.x1, h = box.y2 - box.y1;
+        this.kx.update(cx); this.ky.update(cy); this.kw.update(w); this.kh.update(h);
+        this.lastW = w; this.lastH = h;
+      }
+      getBox() {
+        const cx = this.kx.x[0], cy = this.ky.x[0], w = Math.max(MIN_PERSON_WIDTH, this.kw.x[0]), h = Math.max(MIN_PERSON_HEIGHT, this.kh.x[0]);
+        return { x1: cx - w / 2, y1: cy - h / 2, x2: cx + w / 2, y2: cy + h / 2 };
+      }
+    }
+
+    class Tracklet {
+      constructor(trackId, bbox, score) {
+        this.trackId = trackId;
+        this.kalman = new BoxKalman(bbox);
+        this.bbox = { ...bbox };              // Authoritative latest real detection box
+        this.smoothBbox = { ...bbox };        // Smoothed real detection box
+        this.predictBbox = { ...bbox };       // Kalman internal prediction for association
+        this.score = score;
+        this.hits = 1;
+        this.age = 1;
+        this.missedFrames = 0;
+        this.hasFreshDetection = true;
+        this.state = 'NEW';                  // 'NEW' | 'CONFIRMING' | 'CONFIRMED' | 'TEMPORARILY_LOST' | 'EXPIRED'
+        this.isIntersecting = false;
+        this.isOccluded = false;
+
+        // Sticky Identity State Machine Properties
+        this.identityState = IDENTITY_STATES.UNKNOWN;
+        this.identityLocked = false;
+        this.identityConfidence = 0;
+        this.lastVerifiedFrame = 0;
+        this.lastVerifiedVideoTime = 0;
+        this.conflictCount = 0;
+        this.recoveryCount = 0;
+        this.identityVotes = new Map();      // empId -> count
+        this.galleryUpdateLocked = true;
+        this.stableFramesAfterRecovery = 0;
+        this.pendingSwapEmp = null;
+        this.candidateEmpId = null;   // best-guess match for display only — never auto-confirmed
+
+        const cx = (bbox.x1 + bbox.x2) / 2, cy = (bbox.y1 + bbox.y2) / 2;
+        this.observations = [{ cx, cy, frame: 0, bbox: { ...bbox } }];
+        this.lastObservation = { cx, cy, bbox: { ...bbox } };
+      }
+
+      predict() {
+        this.predictBbox = this.kalman.predict();
+        this.hasFreshDetection = false;
+        this.age++;
+        return this.predictBbox;
+      }
+
+      update(detection, frameNum) {
+        const dBox = detection.bbox;
+        const cx = (dBox.x1 + dBox.x2) / 2, cy = (dBox.y1 + dBox.y2) / 2;
+
+        // OC-SORT Observation-Centric Recovery (OCR): If returning from lost, apply virtual path
+        if (this.state === 'TEMPORARILY_LOST' && this.missedFrames > 1 && this.lastObservation) {
+          const k = this.missedFrames;
+          const startCx = this.lastObservation.cx, startCy = this.lastObservation.cy;
+          for (let step = 1; step <= Math.min(k, 3); step++) {
+            const vCx = startCx + ((cx - startCx) * step) / (k + 1);
+            const vCy = startCy + ((cy - startCy) * step) / (k + 1);
+            this.kalman.kx.update(vCx);
+            this.kalman.ky.update(vCy);
+          }
+        }
+
+        this.kalman.update(dBox);
+        this.bbox = { ...dBox };
+        this.smoothBbox = smoothBbox(this.smoothBbox, dBox, 0.85);
+        this.score = detection.score;
+        this.hits++;
+        this.missedFrames = 0;
+        this.hasFreshDetection = true;
+
+        if (this.state === 'NEW') {
+          this.state = 'CONFIRMING';
+        } else if (this.state === 'CONFIRMING' && this.hits >= 2) {
+          this.state = 'CONFIRMED';
+        } else if (this.state === 'TEMPORARILY_LOST') {
+          this.state = 'CONFIRMED';
+        }
+
+        this.observations.push({ cx, cy, frame: frameNum || 0, bbox: { ...dBox } });
+        if (this.observations.length > 8) this.observations.shift();
+        this.lastObservation = { cx, cy, bbox: { ...dBox } };
+      }
+
+      markMissed() {
+        this.missedFrames++;
+        this.hasFreshDetection = false;
+        if (this.state === 'CONFIRMED' || this.state === 'CONFIRMING' || this.state === 'NEW') {
+          this.state = 'TEMPORARILY_LOST';
+        }
+        if (this.missedFrames > MAX_LOST_FRAMES) {
+          this.state = 'EXPIRED';
+        }
+      }
+
+      getVelocityVector() {
+        if (this.observations.length < 2) return { vx: 0, vy: 0, speed: 0 };
+        const n = this.observations.length;
+        const pLatest = this.observations[n - 1];
+        const pPrev = this.observations[Math.max(0, n - 4)];
+        const dt = Math.max(1, (pLatest.frame - pPrev.frame) || (n - 1));
+        const vx = (pLatest.cx - pPrev.cx) / dt;
+        const vy = (pLatest.cy - pPrev.cy) / dt;
+        const speed = Math.hypot(vx, vy);
+        return { vx, vy, speed };
+      }
+    }
+
+    class MultiObjectTracker {
+      constructor() {
+        this.tracks = [];
+        this.nextTrackNum = 1;
+        this.maxLostFrames = MAX_LOST_FRAMES;
+      }
+
+      reset() {
+        this.tracks = [];
+        this.nextTrackNum = 1;
+      }
+
+      update(detections, frameNum = 0) {
+        // 1. Kalman prediction for all active & temporarily lost tracks
+        for (const t of this.tracks) {
+          t.predict();
+        }
+
+        const highDets = detections.filter(d => d.score >= TRACK_HIGH_CONF);
+        const lowDets = detections.filter(d => d.score >= TRACK_LOW_CONF && d.score < TRACK_HIGH_CONF);
+
+        const matchedTrackIds = new Set();
+        const usedHighD = new Set();
+
+        // =====================================================================
+        // STAGE 1: Global Hungarian Matching (Active Tracks x High Detections)
+        // =====================================================================
+        const activeTracks = this.tracks.filter(t => t.state === 'CONFIRMED' || t.state === 'CONFIRMING' || t.state === 'NEW');
+        if (activeTracks.length > 0 && highDets.length > 0) {
+          const costMatrix1 = [];
+          for (let ti = 0; ti < activeTracks.length; ti++) {
+            const t = activeTracks[ti];
+            const tBox = t.predictBbox || t.smoothBbox || t.bbox;
+            const tCx = (tBox.x1 + tBox.x2) / 2, tCy = (tBox.y1 + tBox.y2) / 2;
+            const tW = Math.max(1, tBox.x2 - tBox.x1), tH = Math.max(1, tBox.y2 - tBox.y1);
+            const tArea = tW * tH;
+            const vel = t.getVelocityVector();
+            // Calibrated reach for frame-to-frame association: prevents jumping onto crossing persons
+            const maxReach = Math.min(55, Math.max(25, Math.max(tW, tH) * 0.75));
+
+            const row = [];
+            for (let di = 0; di < highDets.length; di++) {
+              const d = highDets[di];
+              const dBox = d.bbox;
+              const dCx = (dBox.x1 + dBox.x2) / 2, dCy = (dBox.y1 + dBox.y2) / 2;
+              const dW = Math.max(1, dBox.x2 - dBox.x1), dH = Math.max(1, dBox.y2 - dBox.y1);
+              const dArea = dW * dH;
+
+              // Scoped Sit-to-Stand Accommodation
+              const heightGrowth = dH / Math.max(1, tH);
+              const topRise = tBox.y1 - dBox.y1;
+              const looksLikeStanding = heightGrowth > 1.3 && topRise > 15 && vel.speed < 3.0;
+
+              // Scoped Fast-Walk Accommodation: only extends reach for a track that is
+              // ALREADY measured as moving quickly, so stationary tracks sitting near a
+              // neighbor never get the wider reach (keeps swap risk unchanged for them).
+              const looksLikeWalking = !looksLikeStanding && vel.speed >= 4.0;
+              const walkReach = looksLikeWalking
+                ? Math.min(85, maxReach + vel.speed * 4)
+                : maxReach;
+
+              const effectiveMaxReach = looksLikeStanding
+                ? Math.min(90, maxReach * 1.6)
+                : walkReach;
+
+              const dist = Math.hypot(tCx - dCx, tCy - dCy);
+              if (dist > effectiveMaxReach) { row.push(10.0); continue; }
+
+              const minAreaRatio = looksLikeStanding ? 0.10 : 0.20;
+              if (Math.min(tArea, dArea) / Math.max(tArea, dArea) < minAreaRatio) { row.push(10.0); continue; }
+
+              const iouScore = iou(tBox, dBox);
+              const distNorm = 1.0 - Math.min(1.0, dist / effectiveMaxReach);
+
+              // OC-SORT Momentum direction consistency
+              let dirScore = 1.0;
+              if (vel.speed > 1.2) {
+                const dVx = dCx - tCx, dVy = dCy - tCy;
+                const dSpeed = Math.hypot(dVx, dVy);
+                if (dSpeed > 0.5) {
+                  const cosAngle = (vel.vx * dVx + vel.vy * dVy) / (vel.speed * dSpeed);
+                  dirScore = Math.max(0, (cosAngle + 1) / 2);
+                }
+              }
+
+              // When a track is essentially stationary, direction is meaningless
+              // noise, so IOU/distance should dominate as before. But once a
+              // track is genuinely moving (vel.speed above the dirScore
+              // activation threshold) — exactly the "standing up over someone"
+              // case — position becomes the UNRELIABLE signal (two bodies
+              // briefly occupy the same pixels) while direction stays reliable
+              // (one is clearly departing, the other isn't). Shift weight
+              // toward direction specifically in that regime.
+              const isMoving = vel.speed > 1.2;
+              const iouW = isMoving ? 0.35 : 0.50;
+              const distW = isMoving ? 0.25 : 0.30;
+              const dirW = isMoving ? 0.40 : 0.20;
+              const simScore = (iouScore * iouW) + (distNorm * distW) + (dirScore * dirW);
+              if (simScore < 0.20) { row.push(10.0); continue; }
+              row.push(1.0 - simScore);
+
+              // AMBIGUITY GUARD: if this detection is also geometrically plausible for
+              // ANOTHER active track (crossing/overlap zone), flag it. Collect ALL
+              // plausible candidates (not just the first) — in a tight cluster of
+              // 3+ people, the true swap partner may not be the first one found.
+              //
+              // CRITICAL: the guard radius must match whatever reach was actually
+              // used to accept this match (effectiveMaxReach), not the base
+              // maxReach. A standing/walking track's real matching reach is
+              // widened up to 90px — if the guard still checks against the
+              // narrow base radius, a match that reached into a neighboring
+              // seated track's territory sails through completely unflagged,
+              // which is exactly how a stand-up-to-leave swap goes undetected.
+              const guardRadius = effectiveMaxReach * 0.6;
+              for (let tk = 0; tk < activeTracks.length; tk++) {
+                if (tk === ti) continue;
+                const otherBox = activeTracks[tk].predictBbox || activeTracks[tk].smoothBbox || activeTracks[tk].bbox;
+                if (iou(otherBox, dBox) > 0.10 || Math.hypot(
+                  ((otherBox.x1 + otherBox.x2) / 2) - dCx,
+                  ((otherBox.y1 + otherBox.y2) / 2) - dCy
+                ) < guardRadius) {
+                  d._ambiguousMatch = true;
+                  if (!d._ambiguousOtherTrackIds) d._ambiguousOtherTrackIds = [];
+                  d._ambiguousOtherTrackIds.push(activeTracks[tk].trackId);
+                }
+              }
+            }
+            costMatrix1.push(row);
+          }
+
+          const assignments1 = solveHungarian(costMatrix1);
+          for (const m of assignments1) {
+            if (m.cost <= 0.80) { // simScore >= 0.20
+              const t = activeTracks[m.row];
+              const d = highDets[m.col];
+              t.update(d, frameNum);
+              t.needsIdentityRecheck = !!d._ambiguousMatch; // crossing/overlap zone flag
+              t.ambiguousOtherTrackIds = d._ambiguousOtherTrackIds || null;
+              matchedTrackIds.add(t.trackId);
+              usedHighD.add(m.col);
+              if (d._ambiguousMatch) {
+                console.log(`[TRACK-MATCH-AMBIGUOUS] ${t.trackId} matched in a crossing zone — locked for identity preservation`);
+              }
+            }
+          }
+        }
+
+        // =====================================================================
+        // STAGE 2: Global Hungarian ByteTrack Fallback (Remaining Active x Low Dets)
+        // =====================================================================
+        const remainingActive = activeTracks.filter(t => !matchedTrackIds.has(t.trackId));
+        const usedLowD = new Set();
+        if (remainingActive.length > 0 && lowDets.length > 0) {
+          const costMatrix2 = [];
+          for (let ti = 0; ti < remainingActive.length; ti++) {
+            const t = remainingActive[ti];
+            const tBox = t.predictBbox || t.smoothBbox || t.bbox;
+            const tCx = (tBox.x1 + tBox.x2) / 2, tCy = (tBox.y1 + tBox.y2) / 2;
+            const tW = Math.max(1, tBox.x2 - tBox.x1), tH = Math.max(1, tBox.y2 - tBox.y1);
+            const tArea = tW * tH;
+            const maxReach = Math.min(40, Math.max(20, Math.max(tW, tH) * 0.55));
+
+            const row = [];
+            for (let di = 0; di < lowDets.length; di++) {
+              const d = lowDets[di];
+              const dBox = d.bbox;
+              const dCx = (dBox.x1 + dBox.x2) / 2, dCy = (dBox.y1 + dBox.y2) / 2;
+              const dist = Math.hypot(tCx - dCx, tCy - dCy);
+              if (dist > maxReach) { row.push(10.0); continue; }
+
+              const dW = Math.max(1, dBox.x2 - dBox.x1), dH = Math.max(1, dBox.y2 - dBox.y1);
+              const dArea = dW * dH;
+              if (Math.min(tArea, dArea) / Math.max(tArea, dArea) < 0.25) { row.push(10.0); continue; }
+
+              const iouScore = iou(tBox, dBox);
+              const distNorm = 1.0 - Math.min(1.0, dist / maxReach);
+              const totalScore = (iouScore * 0.70) + (distNorm * 0.30);
+              if (totalScore < 0.25) { row.push(10.0); continue; }
+              row.push(1.0 - totalScore);
+
+              // AMBIGUITY GUARD (Stage 2): low-confidence detections are exactly
+              // what shows up during partial occlusion/crossing, so this stage
+              // needs the same crossing-zone flagging Stage 1 has — otherwise
+              // occluded crossings silently skip identity verification entirely.
+              for (let rk = 0; rk < remainingActive.length; rk++) {
+                if (rk === ti) continue;
+                const otherT = remainingActive[rk];
+                const otherBox = otherT.predictBbox || otherT.smoothBbox || otherT.bbox;
+                if (iou(otherBox, dBox) > 0.10 || Math.hypot(
+                  ((otherBox.x1 + otherBox.x2) / 2) - dCx,
+                  ((otherBox.y1 + otherBox.y2) / 2) - dCy
+                ) < maxReach * 0.6) {
+                  d._ambiguousMatch = true;
+                  if (!d._ambiguousOtherTrackIds) d._ambiguousOtherTrackIds = [];
+                  d._ambiguousOtherTrackIds.push(otherT.trackId);
+                }
+              }
+              // Also check against already-matched Stage 1 tracks in this same
+              // crossing cluster, since Stage 2 tracks are frequently the
+              // occluded partner of a Stage 1 match.
+              for (const at of activeTracks) {
+                if (!matchedTrackIds.has(at.trackId)) continue;
+                const otherBox = at.predictBbox || at.smoothBbox || at.bbox;
+                if (iou(otherBox, dBox) > 0.10 || Math.hypot(
+                  ((otherBox.x1 + otherBox.x2) / 2) - dCx,
+                  ((otherBox.y1 + otherBox.y2) / 2) - dCy
+                ) < maxReach * 0.6) {
+                  d._ambiguousMatch = true;
+                  if (!d._ambiguousOtherTrackIds) d._ambiguousOtherTrackIds = [];
+                  d._ambiguousOtherTrackIds.push(at.trackId);
+                }
+              }
+            }
+            costMatrix2.push(row);
+          }
+
+          const assignments2 = solveHungarian(costMatrix2);
+          for (const m of assignments2) {
+            if (m.cost <= 0.75) {
+              const t = remainingActive[m.row];
+              const d = lowDets[m.col];
+              t.update(d, frameNum);
+              t.needsIdentityRecheck = !!d._ambiguousMatch; // crossing/overlap zone flag (Stage 2)
+              t.ambiguousOtherTrackIds = d._ambiguousOtherTrackIds || null;
+              matchedTrackIds.add(t.trackId);
+              usedLowD.add(m.col);
+            }
+          }
+        }
+
+        // =====================================================================
+        // STAGE 3: BoT-SORT & OCR Lost Track Re-Association (Lost Tracks x Unused High Dets)
+        // =====================================================================
+        const lostTracks = this.tracks.filter(t => t.state === 'TEMPORARILY_LOST' && !matchedTrackIds.has(t.trackId));
+        const unusedHighDIndices = [];
+        for (let di = 0; di < highDets.length; di++) {
+          if (!usedHighD.has(di)) unusedHighDIndices.push(di);
+        }
+
+        if (lostTracks.length > 0 && unusedHighDIndices.length > 0) {
+          const costMatrix3 = [];
+          for (let ti = 0; ti < lostTracks.length; ti++) {
+            const t = lostTracks[ti];
+            const tBox = t.lastObservation ? t.lastObservation.bbox : (t.smoothBbox || t.bbox);
+            const tCx = (tBox.x1 + tBox.x2) / 2, tCy = (tBox.y1 + tBox.y2) / 2;
+            const tW = Math.max(1, tBox.x2 - tBox.x1), tH = Math.max(1, tBox.y2 - tBox.y1);
+            const maxReach = Math.min(65, Math.max(30, Math.max(tW, tH) * 0.85));
+
+            const row = [];
+            for (let ki = 0; ki < unusedHighDIndices.length; ki++) {
+              const di = unusedHighDIndices[ki];
+              const d = highDets[di];
+              const dBox = d.bbox;
+              const dCx = (dBox.x1 + dBox.x2) / 2, dCy = (dBox.y1 + dBox.y2) / 2;
+              const dist = Math.hypot(tCx - dCx, tCy - dCy);
+              if (dist > maxReach) { row.push(10.0); continue; }
+              row.push(dist / maxReach);
+            }
+            costMatrix3.push(row);
+          }
+
+          const assignments3 = solveHungarian(costMatrix3);
+          for (const m of assignments3) {
+            if (m.cost <= 1.0) {
+              const t = lostTracks[m.row];
+              const di = unusedHighDIndices[m.col];
+              const d = highDets[di];
+              t.update(d, frameNum);
+              matchedTrackIds.add(t.trackId);
+              usedHighD.add(di);
+              console.log(`[TRACK-RECOVERED] ${t.trackId} recovered from TEMPORARILY_LOST via high-conf det (score=${d.score.toFixed(2)})`);
+            }
+          }
+        }
+
+        // =====================================================================
+        // STAGE 3b: Lost Track Re-Association using Low-Confidence Detections
+        // Fixes: when a person is MOVING, YOLO often only produces low-conf
+        // detections (motion blur, partial view). Stage 3 only checked high-conf
+        // unused detections, so the box would vanish even though YOLO still
+        // "sees" the person at low confidence. This stage recovers those tracks.
+        // =====================================================================
+        const stillLostTracks = lostTracks.filter(t => !matchedTrackIds.has(t.trackId));
+        const unusedLowDIndices = [];
+        for (let di = 0; di < lowDets.length; di++) {
+          if (!usedLowD.has(di)) unusedLowDIndices.push(di);
+        }
+
+        if (stillLostTracks.length > 0 && unusedLowDIndices.length > 0) {
+          const costMatrix3b = [];
+          for (let ti = 0; ti < stillLostTracks.length; ti++) {
+            const t = stillLostTracks[ti];
+            const tBox = t.lastObservation ? t.lastObservation.bbox : (t.smoothBbox || t.bbox);
+            const tCx = (tBox.x1 + tBox.x2) / 2, tCy = (tBox.y1 + tBox.y2) / 2;
+            const tW = Math.max(1, tBox.x2 - tBox.x1), tH = Math.max(1, tBox.y2 - tBox.y1);
+            // Slightly wider reach for low-conf recovery since the box may have
+            // drifted more during the lost frames (especially on fast movement)
+            const maxReach = Math.min(80, Math.max(35, Math.max(tW, tH) * 1.0));
+
+            const row = [];
+            for (let ki = 0; ki < unusedLowDIndices.length; ki++) {
+              const di = unusedLowDIndices[ki];
+              const d = lowDets[di];
+              const dBox = d.bbox;
+              const dCx = (dBox.x1 + dBox.x2) / 2, dCy = (dBox.y1 + dBox.y2) / 2;
+              const dist = Math.hypot(tCx - dCx, tCy - dCy);
+              if (dist > maxReach) { row.push(10.0); continue; }
+              const dW = Math.max(1, dBox.x2 - dBox.x1), dH = Math.max(1, dBox.y2 - dBox.y1);
+              const tArea = tW * tH, dArea = dW * dH;
+              if (Math.min(tArea, dArea) / Math.max(tArea, dArea) < 0.20) { row.push(10.0); continue; }
+              const iouScore = iou(tBox, dBox);
+              const distNorm = 1.0 - Math.min(1.0, dist / maxReach);
+              const totalScore = (iouScore * 0.60) + (distNorm * 0.40);
+              if (totalScore < 0.18) { row.push(10.0); continue; }
+              row.push(1.0 - totalScore);
+            }
+            costMatrix3b.push(row);
+          }
+
+          const assignments3b = solveHungarian(costMatrix3b);
+          for (const m of assignments3b) {
+            if (m.cost <= 0.82) { // totalScore >= 0.18
+              const t = stillLostTracks[m.row];
+              const di = unusedLowDIndices[m.col];
+              const d = lowDets[di];
+              t.update(d, frameNum);
+              matchedTrackIds.add(t.trackId);
+              usedLowD.add(di);
+              console.log(`[TRACK-RECOVERED-MOVING] ${t.trackId} recovered from TEMPORARILY_LOST via low-conf det (score=${d.score.toFixed(2)})`);
+            }
+          }
+        }
+
+        // =====================================================================
+        // STAGE 4: Mark Unmatched Active Tracks as Missed
+        // =====================================================================
+        for (const t of this.tracks) {
+          if (!matchedTrackIds.has(t.trackId)) {
+            t.markMissed();
+          }
+        }
+
+        // =====================================================================
+        // STAGE 5: Initialize New Candidate Tracklets for Unused High Detections
+        // =====================================================================
+        for (let di = 0; di < highDets.length; di++) {
+          if (usedHighD.has(di)) continue;
+          const d = highDets[di];
+
+          // Spatial gating: Avoid initializing duplicates inside existing healthy tracks
+          let isDuplicate = false;
+          for (const t of this.tracks) {
+            if (t.state !== 'EXPIRED' && (t.hasFreshDetection || t.missedFrames <= 2)) {
+              const tBox = t.smoothBbox || t.bbox;
+              if (iou(tBox, d.bbox) > 0.40 || ioMin(tBox, d.bbox) > 0.65) {
+                isDuplicate = true;
+                break;
+              }
+            }
+          }
+          if (isDuplicate) continue;
+
+          const trackId = "T" + String(this.nextTrackNum++).padStart(3, '0');
+          const newTrack = new Tracklet(trackId, d.bbox, d.score);
+          this.tracks.push(newTrack);
+          console.log(`[TRACK-CREATE] ${trackId} created from detection score=${d.score.toFixed(2)}`);
+        }
+
+        // Overlap & Occlusion Analysis for UI and Feature Sponge Gating
+        for (let i = 0; i < this.tracks.length; i++) {
+          this.tracks[i].isIntersecting = false;
+          this.tracks[i].isOccluded = false;
+          this.tracks[i].hasAnyOverlap = false; // stricter bar, used ONLY to gate Re-ID capture
+        }
+        for (let i = 0; i < this.tracks.length; i++) {
+          if (!this.tracks[i].hasFreshDetection) continue;
+          for (let j = i + 1; j < this.tracks.length; j++) {
+            if (!this.tracks[j].hasFreshDetection) continue;
+            const boxA = this.tracks[i].smoothBbox || this.tracks[i].bbox;
+            const boxB = this.tracks[j].smoothBbox || this.tracks[j].bbox;
+            const iouVal = iou(boxA, boxB);
+            const overlapVal = ioMin(boxA, boxB);
+            // Overhead CCTV: adjacent people's boxes often touch at IoU 0.08-0.20
+            // without any real overlap. Raised threshold so only meaningful overlap
+            // blocks snapshot collection and gallery updates.
+            if (iouVal >= 0.25 || overlapVal >= 0.35) {
+              this.tracks[i].hasAnyOverlap = true;
+              this.tracks[j].hasAnyOverlap = true;
+            }
+            // Overhead CCTV: adjacent desks cause IoU 0.40-0.50 without any real
+            // crossing. Raised thresholds so only genuine crossings (heavy overlap)
+            // trigger isIntersecting, which gates identity maturity.
+            if (iouVal >= 0.55 || overlapVal >= 0.75) {
+              this.tracks[i].isIntersecting = true;
+              this.tracks[j].isIntersecting = true;
+              this.tracks[i].isOccluded = true;
+              this.tracks[j].isOccluded = true;
+            }
+          }
+        }
+
+        // =====================================================================
+        // SMART TRACK-LEVEL NMS: 3-Category Analysis
+        // A. Duplicate Detection (Concentric double-boxes on 1 person -> suppress weaker)
+        // B. Human Crossing (Distinct crossing persons -> NEVER delete, LOCK ID)
+        // C. Occlusion (Partial disappearance -> keep alive with Kalman prediction)
+        // =====================================================================
+        for (let i = 0; i < this.tracks.length; i++) {
+          const tA = this.tracks[i];
+          if (tA.state === 'EXPIRED') continue;
+
+          for (let j = i + 1; j < this.tracks.length; j++) {
+            const tB = this.tracks[j];
+            if (tB.state === 'EXPIRED') continue;
+
+            const boxA = tA.smoothBbox || tA.bbox;
+            const boxB = tB.smoothBbox || tB.bbox;
+            const overlap = ioMin(boxA, boxB);
+            const iouVal = iou(boxA, boxB);
+
+            const cxA = (boxA.x1 + boxA.x2) / 2, cyA = (boxA.y1 + boxA.y2) / 2;
+            const cxB = (boxB.x1 + boxB.x2) / 2, cyB = (boxB.y1 + boxB.y2) / 2;
+            const centerDist = Math.hypot(cxA - cxB, cyA - cyB);
+
+            const wA = Math.max(1, boxA.x2 - boxA.x1), wB = Math.max(1, boxB.x2 - boxB.x1);
+            const avgW = (wA + wB) / 2;
+
+            // Category A: Duplicate detection (Concentric duplicate YOLO hallucinations)
+            // FIX: Made significantly stricter. One box must almost completely swallow 
+            // the other, and their centers must be nearly identical, to be killed.
+            const isDuplicate = centerDist < (avgW * 0.25) && 
+                                iouVal > 0.75 && 
+                                overlap >= 0.90;
+
+            if (isDuplicate) {
+              let suppressA = false;
+              if (tA.hits < tB.hits) suppressA = true;
+              else if (tB.hits < tA.hits) suppressA = false;
+              else if (tA.score < tB.score) suppressA = true;
+              else suppressA = false;
+
+              if (suppressA) {
+                tA.state = 'TEMPORARILY_LOST';
+                tA.missedFrames++;
+                console.log(`[TRACK-NMS] Suppressed concentric duplicate track ${tA.trackId}`);
+              } else {
+                tB.state = 'TEMPORARILY_LOST';
+                tB.missedFrames++;
+                console.log(`[TRACK-NMS] Suppressed concentric duplicate track ${tB.trackId}`);
+              }
+              continue;
+            }
+
+            // Category B & C: Human Crossing / Occlusion
+            // NEVER suppress or assassinate genuine crossing tracks!
+            if (iouVal >= 0.55 || overlap >= 0.75) {
+              tA.isIntersecting = true;
+              tB.isIntersecting = true;
+
+              if (tA.identityLocked || tA.identityState === IDENTITY_STATES.CONFIRMED) {
+                tA.identityState = IDENTITY_STATES.CROSSING_LOCK;
+              }
+              if (tB.identityLocked || tB.identityState === IDENTITY_STATES.CONFIRMED) {
+                tB.identityState = IDENTITY_STATES.CROSSING_LOCK;
+              }
+            }
+          }
+        }
+
+        // Clean output: Filter out expired tracks
+        this.tracks = this.tracks.filter(t => t.state !== 'EXPIRED');
+        return this.tracks;
+      }
+    }
+
+    // =========================================================================
+    // 3. RE-ID FEATURE EXTRACTOR (Person-ReID ONNX)
+    class ReIDExtractor {
+      constructor(session) {
+        this.session = session;
+      }
+
+      async extract(srcCanvas, bbox, score) {
+        const vw = srcCanvas.width, vh = srcCanvas.height;
+        const ex1 = Math.max(0, Math.min(vw, bbox.x1));
+        const ey1 = Math.max(0, Math.min(vh, bbox.y1));
+        const ex2 = Math.max(0, Math.min(vw, bbox.x2));
+        const ey2 = Math.max(0, Math.min(vh, bbox.y2));
+        const w = Math.max(1, ex2 - ex1), h = Math.max(1, ey2 - ey1);
+
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = REID_INPUT_WIDTH;
+        cropCanvas.height = REID_INPUT_HEIGHT;
+        const ctx = cropCanvas.getContext('2d');
+        ctx.drawImage(srcCanvas, ex1, ey1, w, h, 0, 0, REID_INPUT_WIDTH, REID_INPUT_HEIGHT);
+
+        // =========================================================
+        // Torso Color Extraction (Center-Upper chest/shirt region)
+        // =========================================================
+        let dominantColor = { r: 0, g: 0, b: 0 };
+        try {
+          const cX = REID_INPUT_WIDTH / 2;
+          const cY = REID_INPUT_HEIGHT * 0.35; // Target the chest/shirt area
+          const sampleSize = 20;
+          const imgData = ctx.getImageData(cX - sampleSize / 2, cY - sampleSize / 2, sampleSize, sampleSize).data;
+
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let i = 0; i < imgData.length; i += 4) {
+            r += imgData[i];
+            g += imgData[i + 1];
+            b += imgData[i + 2];
+            count++;
+          }
+          dominantColor = { r: r / count, g: g / count, b: b / count };
+        } catch (e) { console.warn("Color extraction failed", e); }
+
+        const chw = canvasToCHWFloatRGB(cropCanvas, REID_MEAN, REID_STD);
+        const inputTensor = new ort.Tensor('float32', chw, [1, 3, REID_INPUT_HEIGHT, REID_INPUT_WIDTH]);
+        const results = await this.session.run({ [this.session.inputNames[0]]: inputTensor });
+        const outputData = results[this.session.outputNames[0]].data;
+
+        const vec = new Float32Array(outputData.length);
+        let norm = 0;
+        for (let k = 0; k < outputData.length; k++) {
+          vec[k] = outputData[k];
+          norm += vec[k] * vec[k];
+        }
+        norm = Math.sqrt(norm) || 1e-9;
+        for (let k = 0; k < vec.length; k++) vec[k] /= norm;
+
+        const thumb = cropCanvas.toDataURL('image/jpeg', 0.8);
+        const qualityScore = (score || 0.6) * Math.min(1.0, Math.sqrt(w * h) / 120);
+
+        return { embedding: vec, thumb, qualityScore, color: dominantColor };
+      }
+    }
+
+    // =========================================================================
+    // 4. SNAPSHOT COLLECTOR (Quality & Diversity Snapshot Gating)
+    // =========================================================================
+    class SnapshotCollector {
+      constructor() {
+        this.trackBuffers = new Map(); // trackId -> { snapshots: [], lastSnapshotFrame: 0, lastCx: 0, lastCy: 0, lastArea: 0 }
+      }
+
+      reset() {
+        this.trackBuffers.clear();
+      }
+
+      collect(tracks, srcCanvas, frameNum) {
+        const activeTrackIds = new Set(tracks.map(t => t.trackId));
+        for (const trackId of this.trackBuffers.keys()) {
+          if (!activeTrackIds.has(trackId)) {
+            this.trackBuffers.delete(trackId);
+          }
+        }
+
+        const candidatesToExtract = [];
+
+        for (const t of tracks) {
+          if ((t.state !== 'CONFIRMED' && t.state !== 'CONFIRMING' && t.state !== 'NEW') || !t.hasFreshDetection) continue;
+          if (t.isOccluded || t.isIntersecting) continue; // Only block during genuine crossing/occlusion, not mere adjacency
+
+          const box = t.smoothBbox || t.bbox;
+          const w = box.x2 - box.x1, h = box.y2 - box.y1;
+          if (t.score < SNAPSHOT_MIN_SCORE || w < SNAPSHOT_MIN_W || h < SNAPSHOT_MIN_H) continue;
+
+          let buf = this.trackBuffers.get(t.trackId);
+          if (!buf) {
+            buf = {
+              trackId: t.trackId,
+              snapshots: [],
+              lastSnapshotFrame: -99,
+              lastCx: 0,
+              lastCy: 0,
+              lastArea: 0
+            };
+            this.trackBuffers.set(t.trackId, buf);
+          }
+
+          if (buf.snapshots.length >= SNAPSHOT_MAX_PER_TRACKLET) continue;
+
+          const cx = (box.x1 + box.x2) / 2, cy = (box.y1 + box.y2) / 2;
+          const area = w * h;
+          const distFromLast = Math.hypot(cx - buf.lastCx, cy - buf.lastCy);
+          const areaRatio = buf.lastArea > 0 ? Math.abs(area - buf.lastArea) / buf.lastArea : 1.0;
+          const frameDelta = frameNum - buf.lastSnapshotFrame;
+
+          // Diversity Criteria: Must move by >= 12px, change area by >= 15%, or 5 frames elapsed
+          const isFirst = (buf.snapshots.length === 0);
+          const isDiverse = isFirst || (distFromLast >= 12) || (areaRatio >= 0.15) || (frameDelta >= 5);
+
+          if (isDiverse) {
+            candidatesToExtract.push({
+              trackId: t.trackId,
+              bbox: { ...box },
+              score: t.score,
+              frameNum,
+              cx, cy, area
+            });
+          }
+        }
+
+        return candidatesToExtract;
+      }
+
+      async extractFeatures(candidateItems, srcCanvas, reidExtractor) {
+        if (!reidExtractor || candidateItems.length === 0) return;
+
+        for (const item of candidateItems) {
+          const buf = this.trackBuffers.get(item.trackId);
+          if (!buf || buf.snapshots.length >= SNAPSHOT_MAX_PER_TRACKLET) continue;
+
+          try {
+            const { embedding, thumb, qualityScore, color } = await reidExtractor.extract(srcCanvas, item.bbox, item.score);
+
+            // Embedding Diversity Gate: Reject if near-identical to an existing snapshot in this buffer
+            let maxSimWithBuffer = 0;
+            for (const s of buf.snapshots) {
+              maxSimWithBuffer = Math.max(maxSimWithBuffer, cosineSim(embedding, s.embedding));
+            }
+
+            if (maxSimWithBuffer < SNAPSHOT_DIVERSITY_MAX_SIM) {
+              const snapshot = {
+                embedding,
+                thumb,
+                qualityScore,
+                color,
+                frameNum: item.frameNum,
+                timestamp: Date.now(),
+                bbox: { ...item.bbox }
+              };
+              buf.snapshots.push(snapshot);
+              buf.lastSnapshotFrame = item.frameNum;
+              buf.lastCx = item.cx;
+              buf.lastCy = item.cy;
+              buf.lastArea = item.area;
+              console.log(`[SNAPSHOT-CAPTURED] track=${item.trackId} bufferSize=${buf.snapshots.length}/${SNAPSHOT_MAX_PER_TRACKLET} qScore=${qualityScore.toFixed(2)} divSim=${maxSimWithBuffer.toFixed(2)}`);
+            }
+          } catch (e) {
+            console.warn('[SNAPSHOT-EXTRACTION-FAILED]', e);
+          }
+        }
+      }
+
+      getSnapshots(trackId) {
+        const buf = this.trackBuffers.get(trackId);
+        return buf ? buf.snapshots : [];
+      }
+    }
+
+    // =========================================================================
+    // 4.5 IDENTITY PERSISTENCE LAYER (IndexedDB)
+    // =========================================================================
+    // Single, centralized persistence layer for physical identities. Nothing
+    // else in the app talks to IndexedDB for identity data directly — only
+    // IdentityDatabase / AttendanceManager go through this class. This is what
+    // makes EMP profiles survive a browser refresh, while temporary tracker
+    // state (T001, T002, ...) is free to reset every session.
+    const IDENTITY_DB_NAME = 'reid_identity_store_v1';
+    const IDENTITY_DB_VERSION = 1;
+    const STORE_PROFILES = 'profiles';
+    const STORE_ATTENDANCE = 'attendance';
+    const STORE_META = 'meta';
+
+    class IdentityPersistence {
+      constructor() {
+        this.db = null;
+        this.opening = null;
+      }
+
+      open() {
+        if (this.db) return Promise.resolve(this.db);
+        if (this.opening) return this.opening;
+        this.opening = new Promise((resolve, reject) => {
+          const req = indexedDB.open(IDENTITY_DB_NAME, IDENTITY_DB_VERSION);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(STORE_PROFILES)) db.createObjectStore(STORE_PROFILES, { keyPath: 'empId' });
+            if (!db.objectStoreNames.contains(STORE_ATTENDANCE)) db.createObjectStore(STORE_ATTENDANCE, { keyPath: 'empId' });
+            if (!db.objectStoreNames.contains(STORE_META)) db.createObjectStore(STORE_META);
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        return this.opening;
+      }
+
+      async _store(storeName, mode) {
+        const db = await this.open();
+        return db.transaction(storeName, mode).objectStore(storeName);
+      }
+
+      async saveProfile(profile) {
+        try {
+          const store = await this._store(STORE_PROFILES, 'readwrite');
+          store.put({
+            empId: profile.empId,
+            name: profile.name,
+            gallerySamples: profile.gallerySamples.map(s => ({
+              embedding: s.embedding, thumb: s.thumb, qualityScore: s.qualityScore,
+              frameNum: s.frameNum, timestamp: s.timestamp
+            })),
+            representativeEmbedding: profile.representativeEmbedding,
+            thumb: profile.thumb,
+            firstSeen: profile.firstSeen,
+            lastSeen: profile.lastSeen,
+            lastSeenFrame: profile.lastSeenFrame,
+            deskAnchor: profile.deskAnchor || null,
+            previousTrackIds: profile.previousTrackIds
+          });
+        } catch (e) {
+          console.warn('[PERSIST-ERROR] saveProfile', profile.empId, e);
+        }
+      }
+
+      async loadAllProfiles() {
+        try {
+          const store = await this._store(STORE_PROFILES, 'readonly');
+          return await new Promise((resolve, reject) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.warn('[PERSIST-ERROR] loadAllProfiles', e);
+          return [];
+        }
+      }
+
+      async saveAttendance(att) {
+        try {
+          const store = await this._store(STORE_ATTENDANCE, 'readwrite');
+          // Persist as "not currently present" — on next load, no live track
+          // exists yet, so state must be re-earned via fresh re-identification.
+          store.put({
+            empId: att.empId,
+            state: 'OUT',
+            firstSeen: att.firstSeen,
+            lastSeen: att.lastSeen,
+            entries: att.entries,
+            exits: att.exits,
+            totalMs: att.totalMs
+          });
+        } catch (e) {
+          console.warn('[PERSIST-ERROR] saveAttendance', att.empId, e);
+        }
+      }
+
+      async loadAllAttendance() {
+        try {
+          const store = await this._store(STORE_ATTENDANCE, 'readonly');
+          return await new Promise((resolve, reject) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+          });
+        } catch (e) {
+          console.warn('[PERSIST-ERROR] loadAllAttendance', e);
+          return [];
+        }
+      }
+
+      async saveMeta(meta) {
+        try {
+          const store = await this._store(STORE_META, 'readwrite');
+          store.put(meta, 'identityMeta');
+        } catch (e) {
+          console.warn('[PERSIST-ERROR] saveMeta', e);
+        }
+      }
+
+      async loadMeta() {
+        try {
+          const store = await this._store(STORE_META, 'readonly');
+          return await new Promise((resolve) => {
+            const req = store.get('identityMeta');
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+          });
+        } catch (e) {
+          return null;
+        }
+      }
+
+      // Permanently wipes ALL enrolled physical identities and attendance
+      // history. Only ever called from an explicit user action.
+      async clearAll() {
+        try {
+          const dbref = await this.open();
+          await new Promise((resolve, reject) => {
+            const tx = dbref.transaction([STORE_PROFILES, STORE_ATTENDANCE, STORE_META], 'readwrite');
+            tx.objectStore(STORE_PROFILES).clear();
+            tx.objectStore(STORE_ATTENDANCE).clear();
+            tx.objectStore(STORE_META).clear();
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        } catch (e) {
+          console.warn('[PERSIST-ERROR] clearAll', e);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 5. IDENTITY DATABASE (Profiles with Dynamic Feature Sponge)
+    // =========================================================================
+    class PhysicalPersonProfile {
+      constructor(empId, initialSnapshots) {
+        this.empId = empId;
+        this.name = `Employee ${empId}`;
+        this.gallerySamples = []; // Rolling bank of up to GALLERY_MAX_SAMPLES (15) multi-pose embeddings
+        this.representativeEmbedding = null;
+        this.thumb = null;
+        this.firstSeen = Date.now();
+        this.lastSeen = Date.now();
+        this.lastSeenFrame = 0;
+        this.deskAnchor = null;
+        this.currentTrackId = null;
+        this.previousTrackIds = [];
+        this.lastSpongeFrame = 0;
+
+        if (initialSnapshots && initialSnapshots.length > 0) {
+          for (const s of initialSnapshots) {
+            this.addSample(s);
+          }
+        }
+      }
+
+      // Feature Sponge: dynamically appends multi-pose embeddings into rolling feature bank
+      addSample(sample) {
+        if (!sample || !sample.embedding) return false;
+
+        // 1. Diversity check: Don't store near-identical consecutive frames
+        let maxSimToGallery = 0;
+        for (const g of this.gallerySamples) {
+          maxSimToGallery = Math.max(maxSimToGallery, cosineSim(sample.embedding, g.embedding));
+        }
+        if (maxSimToGallery >= 0.94) {
+          return false; // Skip redundant angle
+        }
+
+        // 2. Anti-Contamination Gate: Never sponge an alien sample during near-miss occlusions
+        if (this.gallerySamples.length >= 2 && this.representativeEmbedding) {
+          const selfSim = cosineSim(sample.embedding, this.representativeEmbedding);
+          if (selfSim < 0.40) {
+            console.log(`[SPONGE-REJECT] Refused contaminated sample for ${this.empId} (selfSim=${selfSim.toFixed(2)} < 0.40)`);
+            return false;
+          }
+          if (sample.color && this.gallerySamples[0].color) {
+            const cA = sample.color, cB = this.gallerySamples[0].color;
+            const cDist = Math.hypot(cA.r - cB.r, cA.g - cB.g, cA.b - cB.b);
+            // Relaxed from 75 to 150 so lighting shifts and sit-to-stand torso shifts do not block multi-pose learning
+            if (cDist > 150 && selfSim < 0.50) {
+              console.log(`[SPONGE-REJECT] Refused color-contaminated sample for ${this.empId} (cDist=${cDist.toFixed(1)} > 150)`);
+              return false;
+            }
+          }
+        }
+
+        // 3. Rolling FIFO Feature Sponge (up to 15 embeddings)
+        if (this.gallerySamples.length >= GALLERY_MAX_SAMPLES) {
+          this.gallerySamples.shift();
+        }
+        this.gallerySamples.push({ ...sample });
+
+        this.representativeEmbedding = computeWeightedCentroid(this.gallerySamples);
+        if (sample.thumb && (!this.thumb || sample.qualityScore > 0.75)) {
+          this.thumb = sample.thumb;
+        }
+        return true;
+      }
+
+      // Compute maximum similarity
+      getBestSimilarity(probeSample) {
+        if (!probeSample || this.gallerySamples.length === 0) return 0;
+        const probeVec = probeSample.embedding || (probeSample instanceof Float32Array || Array.isArray(probeSample) ? probeSample : null);
+        if (!probeVec) return 0;
+
+        let maxSim = 0;
+        let bestMatchColor = null;
+
+        // Find the best neural match
+        for (const s of this.gallerySamples) {
+          const sim = cosineSim(probeVec, s.embedding);
+          if (sim > maxSim) {
+            maxSim = sim;
+            bestMatchColor = s.color || null;
+          }
+        }
+
+        let centroidSim = this.representativeEmbedding ? cosineSim(probeVec, this.representativeEmbedding) : maxSim;
+        let finalScore = (0.60 * maxSim) + (0.40 * centroidSim);
+
+        // Soft color consistency: deep neural embeddings already encode clothing color and texture.
+        // Bounded penalty ensures lighting changes or sit/stand torso shifts never collapse similarity.
+        if (bestMatchColor && probeSample.color) {
+          const pC = probeSample.color;
+          const gC = bestMatchColor;
+          const colorDist = Math.hypot(pC.r - gC.r, pC.g - gC.g, pC.b - gC.b);
+          if (colorDist > 130) {
+            finalScore -= Math.min(0.05, (colorDist - 130) / 400);
+          }
+        }
+
+        return Math.max(0, finalScore);
+      }
+    }
+
+    class IdentityDatabase {
+      constructor(persistence) {
+        this.profiles = new Map(); // empId -> PhysicalPersonProfile
+        this.nextEmpNum = 1;
+        this.persistence = persistence || null; // IdentityPersistence (IndexedDB-backed)
+      }
+
+      // Load previously-enrolled physical identities from IndexedDB. Called once
+      // at startup, BEFORE any tracking begins. This is what makes EMP profiles
+      // survive a browser refresh, independent of temporary track-ID state.
+      async init() {
+        if (!this.persistence) return;
+        const [records, meta] = await Promise.all([
+          this.persistence.loadAllProfiles(),
+          this.persistence.loadMeta()
+        ]);
+
+        for (const rec of records) {
+          const profile = Object.assign(Object.create(PhysicalPersonProfile.prototype), {
+            empId: rec.empId,
+            name: rec.name || `Employee ${rec.empId}`,
+            gallerySamples: (rec.gallerySamples || []).map(s => ({
+              embedding: s.embedding instanceof Float32Array ? s.embedding : new Float32Array(s.embedding),
+              thumb: s.thumb,
+              qualityScore: s.qualityScore,
+              color: s.color || null,
+              frameNum: s.frameNum,
+              timestamp: s.timestamp
+            })),
+            representativeEmbedding: rec.representativeEmbedding
+              ? (rec.representativeEmbedding instanceof Float32Array ? rec.representativeEmbedding : new Float32Array(rec.representativeEmbedding))
+              : null,
+            thumb: rec.thumb || null,
+            firstSeen: rec.firstSeen || Date.now(),
+            lastSeen: rec.lastSeen || Date.now(),
+            lastSeenFrame: rec.lastSeenFrame || 0,
+            deskAnchor: rec.deskAnchor || null,
+            currentTrackId: null,          // track state never survives a refresh, only the physical identity
+            previousTrackIds: rec.previousTrackIds || []
+          });
+          this.profiles.set(profile.empId, profile);
+        }
+
+        if (meta && meta.nextEmpNum) {
+          this.nextEmpNum = meta.nextEmpNum;
+        } else if (records.length) {
+          let maxNum = 0;
+          for (const r of records) {
+            const n = parseInt(String(r.empId).replace('EMP-', ''), 10);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+          this.nextEmpNum = maxNum + 1;
+        }
+
+        console.log(`[PERSIST-LOAD] Restored ${this.profiles.size} physical identities from IndexedDB. nextEmpNum=${this.nextEmpNum}`);
+      }
+
+      // In-memory only. Does NOT touch IndexedDB — used for session-level resets
+      // (e.g. loading a new video) where identities must be preserved.
+      reset() {
+        this.profiles.clear();
+        this.nextEmpNum = 1;
+      }
+
+      allocateEmpId() {
+        const empId = "EMP-" + String(this.nextEmpNum++).padStart(4, '0');
+        if (this.persistence) this.persistence.saveMeta({ nextEmpNum: this.nextEmpNum });
+        return empId;
+      }
+
+      getProfile(empId) {
+        return this.profiles.get(empId) || null;
+      }
+
+      getAllProfiles() {
+        return Array.from(this.profiles.values());
+      }
+
+      createProfile(initialSnapshots) {
+        const empId = this.allocateEmpId();
+        const profile = new PhysicalPersonProfile(empId, initialSnapshots);
+        this.profiles.set(empId, profile);
+        this.persist(profile);
+        return profile;
+      }
+
+      // Fire-and-forget persistence of a single profile's current state.
+      // Called after any mutation (creation, new sample, re-identification).
+      persist(profile) {
+        if (this.persistence) this.persistence.saveProfile(profile);
+      }
+    }
+
+    // =========================================================================
+    // 5.5 GHOST SPATIAL MEMORY (Reservation & Physical Continuity Engine)
+    // =========================================================================
+    class GhostMemory {
+      constructor(maxAgeFrames = GHOST_MAX_AGE_FRAMES) {
+        this.ghosts = new Map(); // empId -> { empId, lastTrackId, cx, cy, w, h, frameNum, timestamp }
+        this.maxAgeFrames = maxAgeFrames;
+      }
+
+      recordGhost(empId, trackId, box, frameNum) {
+        if (!empId || !box) return;
+        const cx = (box.x1 + box.x2) / 2, cy = (box.y1 + box.y2) / 2;
+        const w = Math.max(1, box.x2 - box.x1), h = Math.max(1, box.y2 - box.y1);
+        this.ghosts.set(empId, {
+          empId,
+          lastTrackId: trackId,
+          cx, cy, w, h,
+          frameNum,
+          timestamp: Date.now()
+        });
+      }
+
+      findCandidateGhosts(box, frameNum, excludedEmpIds = new Set()) {
+        const cx = (box.x1 + box.x2) / 2, cy = (box.y1 + box.y2) / 2;
+        const w = Math.max(1, box.x2 - box.x1), h = Math.max(1, box.y2 - box.y1);
+
+        const candidates = [];
+
+        for (const [empId, g] of this.ghosts.entries()) {
+          if (excludedEmpIds.has(empId)) continue; // STRICT MUTUAL EXCLUSION
+          if (frameNum - g.frameNum > this.maxAgeFrames) continue;
+
+          const dist = Math.hypot(cx - g.cx, cy - g.cy);
+          // Allow returning anywhere in the room. Spatial distance is used in the
+          // multi-attribute recovery score (15% weight) to favor closer ghosts,
+          // but must NOT disqualify a person who walked to the door and returned.
+          const maxAllowedDist = Math.max(600, 4 * Math.max(w, h, g.w, g.h));
+          candidates.push({ empId, ghost: g, distance: dist, maxAllowedDist });
+        }
+
+        candidates.sort((a, b) => a.distance - b.distance);
+        return candidates;
+      }
+
+      findNearestGhost(box, frameNum, excludedEmpIds = new Set()) {
+        const list = this.findCandidateGhosts(box, frameNum, excludedEmpIds);
+        return list.length > 0 ? list[0] : null;
+      }
+
+      isGhostReserved(empId, frameNum) {
+        const g = this.ghosts.get(empId);
+        if (!g) return false;
+        return (frameNum - g.frameNum <= this.maxAgeFrames);
+      }
+
+      removeGhost(empId) {
+        this.ghosts.delete(empId);
+      }
+
+      reset() {
+        this.ghosts.clear();
+      }
+    }
+
+    // =========================================================================
+    // 6. STICKY IDENTITY MANAGER (Non-Transferable 1:1 Identity Architecture)
+    // =========================================================================
+    class IdentityManager {
+      constructor(database) {
+        this.database = database;
+        this.trackToEmp = new Map(); // trackId -> empId (1-to-1 active link)
+        this.empToTrack = new Map(); // empId -> trackId
+        this.ghostMemory = new GhostMemory(GHOST_MAX_AGE_FRAMES);
+      }
+
+      reset() {
+        this.trackToEmp.clear();
+        this.empToTrack.clear();
+        this.ghostMemory.reset();
+      }
+
+      getPhysicalIdentity(trackId) {
+        return this.trackToEmp.get(trackId) || null;
+      }
+
+      // STICKY IDENTITY RULE 1: Non-transferable identity assignment
+      assignIdentity(trackId, empId, activeTrackMap = null) {
+        const currentOwner = this.empToTrack.get(empId);
+        if (currentOwner && currentOwner !== trackId) {
+          // If the old owner is still actively reserved, reject the transfer
+          if (this.isEmpReserved(empId, trackId, activeTrackMap)) {
+            return false;
+          }
+          // Previous owner has fully expired — safely unbind it so the new track can reclaim the identity
+          this.trackToEmp.delete(currentOwner);
+          if (activeTrackMap) {
+            const oldTrk = activeTrackMap.get(currentOwner);
+            if (oldTrk) {
+              oldTrk.identityState = IDENTITY_STATES.LOST;
+              oldTrk.identityLocked = false;
+            }
+          }
+        }
+
+        const currentEmp = this.trackToEmp.get(trackId);
+        if (currentEmp && currentEmp !== empId) {
+          // Track already has another identity
+          return false;
+        }
+
+        this.trackToEmp.set(trackId, empId);
+        this.empToTrack.set(empId, trackId);
+
+        if (activeTrackMap) {
+          const trk = activeTrackMap.get(trackId);
+          if (trk) {
+            trk.identityState = IDENTITY_STATES.CONFIRMED;
+            trk.identityLocked = true;
+          }
+        }
+        return true;
+      }
+
+      // STICKY IDENTITY RULE 2: Mutual exclusion reservation check
+      isEmpReserved(empId, excludeTrackId = null, activeTrackMap = null, frameNum = 0) {
+        const activeTrackId = this.empToTrack.get(empId);
+        if (activeTrackId) {
+          if (excludeTrackId && activeTrackId === excludeTrackId) return false;
+          if (activeTrackMap) {
+            const trk = activeTrackMap.get(activeTrackId);
+            if (trk && trk.state !== 'EXPIRED') {
+              // As long as the track is actively tracked by ByteTrack (not expired),
+              // it reserves this identity. Never allow another track to steal it!
+              return true;
+            }
+          } else {
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      getAllProfiles() {
+        return this.database.getAllProfiles();
+      }
+
+      // Main asynchronous processing step
+      async process(tracks, srcCanvas, reidExtractor, snapshotCollector, attendanceManager, eventSystem, frameNum, videoTime = 0) {
+        const activeTrackMap = new Map(tracks.map(t => [t.trackId, t]));
+
+        // =====================================================================
+        // PHASE 1: GHOST SYNCHRONIZATION & EXPIRED TRACK RELEASE
+        // =====================================================================
+        for (const [trackId, empId] of this.trackToEmp.entries()) {
+          const trk = activeTrackMap.get(trackId);
+          if (trk && trk.state === 'TEMPORARILY_LOST') {
+            // Track is temporarily lost: Keep mapping sticky, mark state LOST, refresh ghost
+            trk.identityState = IDENTITY_STATES.LOST;
+            const box = trk.smoothBbox || trk.bbox;
+            if (box) this.ghostMemory.recordGhost(empId, trackId, box, frameNum);
+          } else if (!trk || trk.state === 'EXPIRED') {
+            // Track has fully expired: Record ghost reservation, release active link
+            const box = trk ? (trk.smoothBbox || trk.bbox) : null;
+            if (box) this.ghostMemory.recordGhost(empId, trackId, box, frameNum);
+            this.trackToEmp.delete(trackId);
+            this.empToTrack.delete(empId);
+            const profile = this.database.getProfile(empId);
+            if (profile && profile.currentTrackId === trackId) {
+              profile.currentTrackId = null;
+            }
+            console.log(`[GHOST-RESERVED] Track ${trackId} expired -> ${empId} reserved in Ghost Memory`);
+          }
+        }
+
+        const activeTracks = tracks.filter(t => t.hasFreshDetection && (t.state === 'CONFIRMED' || t.state === 'CONFIRMING' || t.state === 'NEW'));
+        const unassignedTracks = [];
+
+        // =====================================================================
+        // PHASE 2: ACTIVE TRACKS WITH CONFIRMED IDENTITIES (ByteTrack-Trusting)
+        // -------------------------------------------------------------------
+        // Per mentor's design: ByteTrack (Kalman + Hungarian) is the
+        // high-performance, authoritative layer for any track it is still
+        // actively matching frame-to-frame — including through crossings and
+        // occlusion. Re-ID is comparatively slow and noisy (lighting, pose,
+        // sit/stand changes), so it must NEVER be used to babysit or
+        // second-guess an identity ByteTrack is still confidently holding.
+        // Re-ID is reserved exclusively as the recovery "net": it only acts
+        // once ByteTrack has completely lost a track (Phase 1 ghosting /
+        // Phase 3 unassigned-track recovery below), never here.
+        // =====================================================================
+        for (const t of activeTracks) {
+          const existingEmpId = this.trackToEmp.get(t.trackId);
+
+          if (existingEmpId) {
+            const profile = this.database.getProfile(existingEmpId);
+            if (profile) {
+
+              // ---------------------------------------------------------------
+              // AMBIGUOUS-CROSSING VERIFICATION
+              // Stage 1/2 flag a match as ambiguous when made inside a
+              // crossing/overlap zone. Geometry alone can't tell crossing
+              // people apart, so for THESE matches we spend a cheap Re-ID
+              // check before trusting the identity. We check against EVERY
+              // candidate track involved in the ambiguity (not just one),
+              // since a tight cluster of 3+ people can mean the true swap
+              // partner isn't the first one geometrically found. If a
+              // candidate's profile is a clearly better appearance match,
+              // the identities were swapped by the tracker — correct it.
+              //
+              // The swap margin is tightened (instead of the fixed 0.08)
+              // when the track is heavily occluded/intersecting, since
+              // similar clothing on two people compresses the cosine-
+              // similarity gap even when a swap has clearly occurred
+              // geometrically.
+              // ---------------------------------------------------------------
+              if (t.needsIdentityRecheck && profile.gallerySamples.length > 0) {
+                try {
+                  const box = t.smoothBbox || t.bbox;
+                  const probe = await reidExtractor.extract(srcCanvas, box, t.score);
+                  if (probe && probe.embedding) {
+                    const ownSim = profile.getBestSimilarity(probe);
+                    const candidateIds = t.ambiguousOtherTrackIds || [];
+                    let bestOtherTrack = null;
+                    let bestOtherEmpId = null;
+                    let bestSwappedSim = -1;
+
+                    for (const otherTrackId of candidateIds) {
+                      const otherTrack = activeTrackMap.get(otherTrackId);
+                      if (!otherTrack) continue;
+                      const otherEmpId = this.trackToEmp.get(otherTrack.trackId);
+                      if (!otherEmpId || otherEmpId === existingEmpId) continue;
+                      const otherProfile = this.database.getProfile(otherEmpId);
+                      if (!otherProfile || otherProfile.gallerySamples.length === 0) continue;
+
+                      const swappedSim = otherProfile.getBestSimilarity(probe);
+                      if (swappedSim > bestSwappedSim) {
+                        bestSwappedSim = swappedSim;
+                        bestOtherTrack = otherTrack;
+                        bestOtherEmpId = otherEmpId;
+                      }
+                    }
+
+                    // A swap must ONLY be considered if:
+                    // 1. This track genuinely no longer matches its own identity (ownSim < 0.48)
+                    // 2. This track strongly matches the other profile (bestSwappedSim >= 0.58)
+                    // 3. The other profile is significantly better (margin >= 0.10)
+                    // 4. Evidence persists across multiple consecutive frames (conflictCount >= 3)
+                    const swapCandidateValid = bestOtherTrack &&
+                                              ownSim < 0.48 &&
+                                              bestSwappedSim >= 0.58 &&
+                                              (bestSwappedSim - ownSim) >= 0.10;
+
+                    if (swapCandidateValid) {
+                      if (t.pendingSwapEmp === bestOtherEmpId) {
+                        t.conflictCount = (t.conflictCount || 0) + 1;
+                      } else {
+                        t.pendingSwapEmp = bestOtherEmpId;
+                        t.conflictCount = 1;
+                      }
+
+                      if (t.conflictCount >= 3) {
+                        // Confirmed persistent swap: swap bindings
+                        this.trackToEmp.set(t.trackId, bestOtherEmpId);
+                        this.empToTrack.set(bestOtherEmpId, t.trackId);
+                        this.trackToEmp.set(bestOtherTrack.trackId, existingEmpId);
+                        this.empToTrack.set(existingEmpId, bestOtherTrack.trackId);
+
+                        // Sync profiles so currentTrackId points to the corrected track
+                        const corrProf1 = this.database.getProfile(bestOtherEmpId);
+                        if (corrProf1) { corrProf1.currentTrackId = t.trackId; this.database.persist(corrProf1); }
+                        const corrProf2 = this.database.getProfile(existingEmpId);
+                        if (corrProf2) { corrProf2.currentTrackId = bestOtherTrack.trackId; this.database.persist(corrProf2); }
+
+                        console.log(`[IDENTITY-SWAP-CORRECTED] ${t.trackId}<->${bestOtherTrack.trackId} swapped ${existingEmpId}<->${bestOtherEmpId} (ownSim=${ownSim.toFixed(2)}, swappedSim=${bestSwappedSim.toFixed(2)})`);
+                        if (eventSystem) eventSystem.log(bestOtherEmpId, 'SWAP-CORRECTED', Date.now(), `Crossing swap corrected with ${existingEmpId}`, frameNum, videoTime, t.trackId);
+
+                        t.identityState = IDENTITY_STATES.CONFIRMED;
+                        t.identityLocked = true;
+                        t.needsIdentityRecheck = false;
+                        t.ambiguousOtherTrackIds = null;
+                        t.conflictCount = 0;
+                        t.pendingSwapEmp = null;
+                        t.stableFramesAfterRecovery = 0;
+
+                        bestOtherTrack.identityState = IDENTITY_STATES.CONFIRMED;
+                        bestOtherTrack.identityLocked = true;
+                        bestOtherTrack.needsIdentityRecheck = false;
+                        bestOtherTrack.ambiguousOtherTrackIds = null;
+                        bestOtherTrack.conflictCount = 0;
+                        bestOtherTrack.pendingSwapEmp = null;
+                        bestOtherTrack.stableFramesAfterRecovery = 0;
+                        continue;
+                      }
+                    } else {
+                      // Evidence not met or track matches itself: reset conflict state
+                      t.conflictCount = 0;
+                      t.pendingSwapEmp = null;
+                    }
+
+                    if (ownSim < CROSSING_MEDIUM_SIM && candidateIds.length > 0) {
+                      t.identityState = IDENTITY_STATES.CROSSING_LOCK;
+                      t.needsIdentityRecheck = true;
+                      profile.currentTrackId = t.trackId;
+                      continue;
+                    }
+                  }
+                } catch (e) { /* fall through to normal trust below on extraction failure */ }
+              }
+
+              profile.lastSeen = Date.now();
+              profile.lastSeenFrame = frameNum;
+              profile.currentTrackId = t.trackId;
+
+              // Trust ByteTrack for all non-ambiguous matches: no per-frame
+              // Re-ID probing, no swap-checking. Ambiguous crossing matches
+              // are verified above instead of being blindly trusted.
+              t.identityState = IDENTITY_STATES.CONFIRMED;
+              t.identityLocked = true;
+              t.needsIdentityRecheck = false;
+              t.ambiguousOtherTrackIds = null;
+              t.conflictCount = 0;
+              t.pendingSwapEmp = null;
+              t.stableFramesAfterRecovery++;
+
+              const box = t.smoothBbox || t.bbox;
+
+              // Desk Anchor Smooth Tracking (Stationary only)
+              const cx = (box.x1 + box.x2) / 2, cy = (box.y1 + box.y2) / 2;
+              const vel = t.getVelocityVector ? t.getVelocityVector() : { speed: 0 };
+              if (vel.speed < 1.0) {
+                if (profile.deskAnchor) {
+                  profile.deskAnchor.cx = profile.deskAnchor.cx * 0.97 + cx * 0.03;
+                  profile.deskAnchor.cy = profile.deskAnchor.cy * 0.97 + cy * 0.03;
+                } else {
+                  profile.deskAnchor = { cx, cy };
+                }
+              }
+
+              // Passive Gallery Enrollment ONLY. This is not verification —
+              // it just banks appearance samples for the Re-ID "net" to use
+              // later on genuinely lost/new tracks. Gated to clean, settled,
+              // non-occluded frames so we never bank a contaminated sample.
+              if (!t.isIntersecting && !t.isOccluded &&
+                  t.stableFramesAfterRecovery >= RECOVERY_STABLE_FRAMES && t.score >= SNAPSHOT_MIN_SCORE) {
+                const w = box.x2 - box.x1, h = box.y2 - box.y1;
+                if (w >= SNAPSHOT_MIN_W && h >= SNAPSHOT_MIN_H &&
+                    (frameNum - (profile.lastSpongeFrame || 0) >= 15 || profile.gallerySamples.length < 3)) {
+                  try {
+                    const sample = await reidExtractor.extract(srcCanvas, box, t.score);
+                    if (sample && sample.embedding) {
+                      sample.frameNum = frameNum;
+                      sample.timestamp = Date.now();
+                      if (profile.addSample(sample)) {
+                        profile.lastSpongeFrame = frameNum;
+                        this.database.persist(profile);
+                        console.log(`[GALLERY-UPDATE] ${existingEmpId} stored sample (${profile.gallerySamples.length}/${GALLERY_MAX_SAMPLES})`);
+                      }
+                    }
+                  } catch (e) { }
+                }
+              }
+            }
+          } else {
+            unassignedTracks.push(t);
+          }
+        }
+
+        if (unassignedTracks.length === 0) return;
+
+        // =====================================================================
+        // PHASE 3: UNASSIGNED TRACK RECOVERY (Multi-Attribute Continuity)
+        // =====================================================================
+        const remainingUnassigned = [];
+        for (const t of unassignedTracks) {
+          const box = t.smoothBbox || t.bbox;
+          const tCx = (box.x1 + box.x2) / 2, tCy = (box.y1 + box.y2) / 2;
+          const vel = t.getVelocityVector ? t.getVelocityVector() : { speed: 0 };
+
+          let recoveredProfileId = null;
+          let recoverySource = '';
+
+          // Check Ghost Memory (Multi-Candidate Visual Re-ID First)
+          const activeReservedEmps = new Set();
+          for (const p of this.database.getAllProfiles()) {
+            if (this.isEmpReserved(p.empId, t.trackId, activeTrackMap, frameNum)) {
+              activeReservedEmps.add(p.empId);
+            }
+          }
+
+          const candidateGhosts = this.ghostMemory.findCandidateGhosts(box, frameNum, activeReservedEmps);
+          if (candidateGhosts.length > 0) {
+            try {
+              const probeFeat = await reidExtractor.extract(srcCanvas, box, t.score);
+              if (probeFeat && probeFeat.embedding) {
+                let bestGhostEmpId = null;
+                let bestRecoveryScore = -1;
+                let bestRecoverySim = 0;
+                let bestGhostDist = 0;
+
+                for (const cand of candidateGhosts) {
+                  const gEmpId = cand.empId;
+                  const profile = this.database.getProfile(gEmpId);
+                  if (!profile || profile.gallerySamples.length === 0) continue;
+                  if (this.isEmpReserved(gEmpId, t.trackId, activeTrackMap, frameNum)) continue;
+
+                  const sim = profile.getBestSimilarity(probeFeat);
+                  const spatialScore = 1.0 - Math.min(1.0, cand.distance / cand.maxAllowedDist);
+                  const motionScore = (vel.speed < 2.0) ? 1.0 : 0.6;
+                  let deskScore = 0.0;
+                  // Desk gravity is only valid for a track that is itself
+                  // roughly stationary (settling into/near a desk). A track
+                  // moving quickly (someone walking PAST a colleague's desk)
+                  // must never get the desk-anchor bonus — otherwise Phase 3
+                  // can snap the seated colleague's identity onto the person
+                  // just walking by, purely because they passed within the
+                  // gravity radius.
+                  if (profile.deskAnchor && vel.speed < DESK_GRAVITY_MAX_SPEED) {
+                    const dDist = Math.hypot(tCx - profile.deskAnchor.cx, tCy - profile.deskAnchor.cy);
+                    if (dDist <= DESK_GRAVITY_RADIUS) deskScore = 1.0;
+                  }
+
+                  // Multi-Attribute Recovery Score: 75% Visual Re-ID, 15% Spatial, 10% Motion
+                  const recoveryScore = (0.75 * sim) + (0.15 * spatialScore) + (0.10 * motionScore);
+
+                  if (sim >= GHOST_RECOVERY_MIN_SIM || (deskScore > 0 && sim >= DESK_GRAVITY_MIN_CONFIDENCE)) {
+                    if (recoveryScore >= 0.58 && recoveryScore > bestRecoveryScore) {
+                      bestRecoveryScore = recoveryScore;
+                      bestGhostEmpId = gEmpId;
+                      bestRecoverySim = sim;
+                      bestGhostDist = cand.distance;
+                    }
+                  }
+                }
+
+                if (bestGhostEmpId) {
+                  recoveredProfileId = bestGhostEmpId;
+                  recoverySource = `Re-ID-First Ghost Recovery (sim=${bestRecoverySim.toFixed(2)}, dist=${Math.round(bestGhostDist)}px, score=${bestRecoveryScore.toFixed(2)})`;
+                }
+              }
+            } catch (e) { }
+          }
+
+          if (recoveredProfileId && this.assignIdentity(t.trackId, recoveredProfileId, activeTrackMap)) {
+            const profile = this.database.getProfile(recoveredProfileId);
+            profile.currentTrackId = t.trackId;
+            profile.lastSeen = Date.now();
+            profile.lastSeenFrame = frameNum;
+            if (!profile.previousTrackIds.includes(t.trackId)) {
+              profile.previousTrackIds.push(t.trackId);
+              if (profile.previousTrackIds.length > 50) profile.previousTrackIds.shift();
+            }
+            this.ghostMemory.removeGhost(recoveredProfileId);
+            t.galleryUpdateLocked = true;
+            t.stableFramesAfterRecovery = 0;
+
+            console.log(`[IDENTITY-RECOVERED] ${recoveredProfileId} assigned to ${t.trackId} via ${recoverySource}`);
+            if (eventSystem) eventSystem.log(recoveredProfileId, 'RECOVERED', Date.now(), recoverySource, frameNum, videoTime, t.trackId);
+            if (attendanceManager) attendanceManager.recordPresence(recoveredProfileId, t.trackId, videoTime);
+            continue;
+          }
+
+          remainingUnassigned.push(t);
+        }
+
+        if (remainingUnassigned.length === 0) return;
+
+        // =====================================================================
+        // PHASE 4: MATURITY-GATED AUTO-ENROLLMENT
+        // =====================================================================
+        for (const t of remainingUnassigned) {
+          if (this.trackToEmp.has(t.trackId)) continue;
+
+          // Maturity/clean-frame gate now ONLY blocks minting a brand-new profile
+          // further down. Matching against an EXISTING profile is allowed even on
+          // an immature/occluded track — an already-enrolled person shouldn't be
+          // stuck in "Analyzing..." forever just because their desk is busy.
+          //
+          // Stall-breaker: if a track is genuinely long-lived (lots of hits) but
+          // isIntersecting/isOccluded never clears — e.g. someone permanently
+          // seated behind a monitor or next to a neighbor — isMatureAndClean would
+          // never be true and the track would show "Analyzing..." indefinitely,
+          // even though we have plenty of observations to work with. Once a track
+          // has accumulated IDENTITY_STALL_BREAKER_FRAMES hits, treat it as mature
+          // regardless of occlusion/intersection so it can still match or enroll.
+          const isStalledButObserved = t.hits >= IDENTITY_STALL_BREAKER_FRAMES;
+          const isMatureAndClean = (t.hits >= IDENTITY_CONFIRM_FRAMES && !t.isIntersecting && !t.isOccluded) || isStalledButObserved;
+
+          let snapshots = snapshotCollector ? snapshotCollector.getSnapshots(t.trackId) : [];
+          if (snapshots.length === 0) {
+            try {
+              const box = t.smoothBbox || t.bbox;
+              const feat = await reidExtractor.extract(srcCanvas, box, t.score);
+              if (feat) snapshots = [feat];
+            } catch (e) { }
+          }
+          if (snapshots.length === 0) {
+            t.identityState = IDENTITY_STATES.CANDIDATE;
+            continue;
+          }
+
+          const centroid = computeWeightedCentroid(snapshots);
+          if (!centroid) continue;
+
+          const tBox = t.smoothBbox || t.bbox;
+          const tCx = (tBox.x1 + tBox.x2) / 2, tCy = (tBox.y1 + tBox.y2) / 2;
+          let bestExistingProfile = null;
+          let bestSim = 0;
+          // Unconstrained best match, ignoring the distance-inflated threshold
+          // below. Used ONLY as a last-resort fallback once the roster is full
+          // (see rosterFull block) — with a fixed headcount, an unmatched track
+          // at that point MUST be one of the existing profiles, so the strict
+          // anti-teleport bar (meant to stop US from wrongly minting a NEW
+          // profile) no longer applies; minting is impossible either way.
+          let rawBestProfile = null;
+          let rawBestSim = 0;
+
+          for (const p of this.database.getAllProfiles()) {
+            if (this.isEmpReserved(p.empId, t.trackId, activeTrackMap, frameNum)) continue;
+            const sim = p.getBestSimilarity(centroid);
+            if (sim > rawBestSim) {
+              rawBestSim = sim;
+              rawBestProfile = p;
+            }
+            // Sanity-gate against teleporting: if we know where this profile was
+            // last anchored, a "match" that's implausibly far away needs a much
+            // higher similarity bar to be trusted — a shirt-color match across
+            // the room is far more likely a contaminated/ambiguous embedding
+            // than a real re-appearance.
+            let requiredSim = REID_MIN_CONFIDENCE_THRESHOLD;
+            if (p.deskAnchor) {
+              const dAnchor = Math.hypot(tCx - p.deskAnchor.cx, tCy - p.deskAnchor.cy);
+              // Anti-teleport: inflates the similarity bar when a match is far from
+              // the profile's known desk position. Softened for overhead CCTV —
+              // walking to the door (300px) is legitimate movement, not teleporting.
+              // The pose change (sit → stand → walk) already compresses similarity,
+              // so the penalty must stay gentle to avoid blocking valid re-identification.
+              const recentlyUnsettled = t.hits < 15;
+              if (dAnchor > 300) requiredSim = Math.max(requiredSim, recentlyUnsettled ? 0.52 : 0.56);
+              else if (dAnchor > 150) requiredSim = Math.max(requiredSim, recentlyUnsettled ? 0.50 : 0.52);
+            }
+            if (sim > bestSim && sim >= requiredSim) {
+              bestSim = sim;
+              bestExistingProfile = p;
+            }
+          }
+
+          // If it matches an existing unreserved profile with high confidence, recover it
+          if (bestExistingProfile && bestSim >= REID_MIN_CONFIDENCE_THRESHOLD) {
+            if (this.assignIdentity(t.trackId, bestExistingProfile.empId, activeTrackMap)) {
+              bestExistingProfile.currentTrackId = t.trackId;
+              bestExistingProfile.lastSeen = Date.now();
+              bestExistingProfile.lastSeenFrame = frameNum;
+              this.ghostMemory.removeGhost(bestExistingProfile.empId);
+              t.galleryUpdateLocked = true;
+              t.stableFramesAfterRecovery = 0;
+
+              console.log(`[IDENTITY-DIRECT-RECOVERY] ${bestExistingProfile.empId} recovered on ${t.trackId} (sim=${bestSim.toFixed(2)})`);
+              if (eventSystem) eventSystem.log(bestExistingProfile.empId, 'RECOVERED', Date.now(), `Direct match (sim=${bestSim.toFixed(2)})`, frameNum, videoTime, t.trackId);
+              if (attendanceManager) attendanceManager.recordPresence(bestExistingProfile.empId, t.trackId, videoTime);
+              continue;
+            }
+          }
+
+          const rosterFull = this.database.getAllProfiles().length >= MAX_ENROLLED_EMPLOYEES;
+
+          // Roster is capped: once MAX_ENROLLED_EMPLOYEES physical people exist,
+          // force unassigned track onto the best unreserved match.
+          if (rosterFull) {
+            const forcedProfile = bestExistingProfile || rawBestProfile;
+            const forcedSim = bestExistingProfile ? bestSim : rawBestSim;
+            if (forcedProfile && forcedSim >= 0.40) {
+              if (this.assignIdentity(t.trackId, forcedProfile.empId, activeTrackMap)) {
+                forcedProfile.currentTrackId = t.trackId;
+                forcedProfile.lastSeen = Date.now();
+                forcedProfile.lastSeenFrame = frameNum;
+                this.ghostMemory.removeGhost(forcedProfile.empId);
+                t.identityState = IDENTITY_STATES.CONFIRMED;
+                t.identityLocked = true;
+                t.galleryUpdateLocked = true;
+                t.stableFramesAfterRecovery = 0;
+
+                console.log(`[IDENTITY-FORCED-RECOVERY] ${forcedProfile.empId} forced onto ${t.trackId} (sim=${forcedSim.toFixed(2)}, roster full at ${MAX_ENROLLED_EMPLOYEES})`);
+                if (eventSystem) eventSystem.log(forcedProfile.empId, 'RECOVERED', Date.now(), `Forced match, roster full (sim=${forcedSim.toFixed(2)})`, frameNum, videoTime, t.trackId);
+                if (attendanceManager) attendanceManager.recordPresence(forcedProfile.empId, t.trackId, videoTime);
+                continue;
+              }
+            }
+            t.identityState = IDENTITY_STATES.CANDIDATE;
+            continue;
+          }
+
+          // Ambiguity check against existing unreserved profiles:
+          // Observe for a brief window (until IDENTITY_STALL_BREAKER_FRAMES). Once settled,
+          // if it hasn't cleared the match bar, enroll as a distinct physical person.
+          if (bestExistingProfile && bestSim > REID_REJECT_SIM && bestSim < REID_MIN_CONFIDENCE_THRESHOLD) {
+            if (t.hits < IDENTITY_STALL_BREAKER_FRAMES) {
+              t.identityState = IDENTITY_STATES.UNCERTAIN;
+              t.candidateEmpId = bestExistingProfile.empId;
+              continue;
+            }
+          }
+
+          // Only mint a genuinely NEW profile once the track is mature and clean
+          if (!isMatureAndClean) {
+            t.identityState = IDENTITY_STATES.CANDIDATE;
+            continue;
+          }
+
+          // Mint brand new physical employee profile (only while under the cap)
+          const newProfile = this.database.createProfile(snapshots);
+          newProfile.deskAnchor = { cx: tCx, cy: tCy };
+
+          this.assignIdentity(t.trackId, newProfile.empId, activeTrackMap);
+          newProfile.currentTrackId = t.trackId;
+          newProfile.lastSeen = Date.now();
+          newProfile.lastSeenFrame = frameNum;
+          newProfile.previousTrackIds.push(t.trackId);
+          t.identityState = IDENTITY_STATES.CONFIRMED;
+          t.identityLocked = true;
+          t.galleryUpdateLocked = true;
+          t.stableFramesAfterRecovery = 0;
+
+          console.log(`[IDENTITY-NEW] ${newProfile.empId} auto-enrolled on ${t.trackId}`);
+          if (eventSystem) eventSystem.log(newProfile.empId, 'ENTERED', Date.now(), `Auto-enrolled on ${t.trackId}`, frameNum, videoTime, t.trackId);
+          if (attendanceManager) attendanceManager.recordPresence(newProfile.empId, t.trackId, videoTime);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 7. ATTENDANCE MANAGER (Video-Time Accurate Session Tracking)
+    // =========================================================================
+    class AttendanceManager {
+      constructor(persistence) {
+        this.records = new Map(); // empId -> AttendanceRecord
+        this.gracePeriodSec = 3.5; // 3.5 seconds of video time grace period
+        this.persistence = persistence || null;
+      }
+
+      async init() {
+        if (!this.persistence) return;
+        const records = await this.persistence.loadAllAttendance();
+        for (const r of records) {
+          this.records.set(r.empId, {
+            empId: r.empId,
+            state: 'OUT',
+            currentTrackId: null,
+            firstSeen: r.firstSeen || Date.now(),
+            lastSeen: r.lastSeen || Date.now(),
+            firstSeenVideoTime: r.firstSeenVideoTime || 0,
+            lastSeenVideoTime: r.lastSeenVideoTime || 0,
+            sessionStartVideoTime: null,
+            entries: r.entries || 0,
+            exits: r.exits || 0,
+            totalVideoSeconds: r.totalVideoSeconds || 0,
+            totalMs: r.totalMs || 0
+          });
+        }
+        console.log(`[PERSIST-LOAD] Restored attendance history for ${this.records.size} profiles.`);
+      }
+
+      reset() {
+        this.records.clear();
+      }
+
+      persist(att) {
+        if (this.persistence) this.persistence.saveAttendance(att);
+      }
+
+      recordPresence(empId, trackId, videoTime = 0) {
+        const now = Date.now();
+        let att = this.records.get(empId);
+        if (!att) {
+          att = {
+            empId,
+            state: 'CONFIRMED',
+            currentTrackId: trackId,
+            firstSeen: now,
+            lastSeen: now,
+            firstSeenVideoTime: videoTime,
+            lastSeenVideoTime: videoTime,
+            sessionStartVideoTime: videoTime,
+            entries: 1,
+            exits: 0,
+            totalVideoSeconds: 0,
+            totalMs: 0
+          };
+          this.records.set(empId, att);
+        } else {
+          if (att.state === 'OUT' || att.state === 'TEMPORARILY_LOST') {
+            att.state = 'CONFIRMED';
+            att.entries++;
+            att.sessionStartVideoTime = videoTime;
+          }
+          att.currentTrackId = trackId;
+          att.lastSeen = now;
+          att.lastSeenVideoTime = videoTime;
+        }
+        this.persist(att);
+      }
+
+      update(profiles, eventSystem, videoTime = 0) {
+        const now = Date.now();
+        for (const p of profiles) {
+          const empId = p.empId;
+          let att = this.records.get(empId);
+          if (!att) {
+            this.recordPresence(empId, p.currentTrackId, videoTime);
+            att = this.records.get(empId);
+          }
+
+          const isVisible = !!p.currentTrackId;
+          if (isVisible) {
+            if (att.state !== 'CONFIRMED') {
+              att.state = 'CONFIRMED';
+              att.entries++;
+              att.sessionStartVideoTime = videoTime;
+              console.log(`[ATTENDANCE] ${empId} active and marked CONFIRMED on track ${p.currentTrackId} (Video Time: ${videoTime.toFixed(1)}s)`);
+              if (eventSystem) eventSystem.log(empId, 'RE-ENTERED', now, `Active on ${p.currentTrackId}`, p.lastSeenFrame, videoTime, p.currentTrackId);
+              this.persist(att);
+            }
+            att.lastSeen = now;
+            att.lastSeenVideoTime = videoTime;
+            att.currentTrackId = p.currentTrackId;
+          } else {
+            if (att.state === 'CONFIRMED') {
+              att.state = 'TEMPORARILY_LOST';
+            }
+            if (att.state === 'TEMPORARILY_LOST') {
+              if (videoTime - (att.lastSeenVideoTime || 0) > this.gracePeriodSec) {
+                att.state = 'OUT';
+                att.exits++;
+                if (att.sessionStartVideoTime !== null) {
+                  const dwellDelta = Math.max(0, videoTime - att.sessionStartVideoTime);
+                  att.totalVideoSeconds += dwellDelta;
+                  att.totalMs += (dwellDelta * 1000);
+                  att.sessionStartVideoTime = null;
+                }
+                att.currentTrackId = null;
+                console.log(`[ATTENDANCE] ${empId} marked OUT after grace period (Video Dwell: ${att.totalVideoSeconds.toFixed(1)}s, Entries: ${att.entries})`);
+                if (eventSystem) eventSystem.log(empId, 'EXITED', now, 'Exited camera view', p.lastSeenFrame, videoTime, 'NONE');
+                this.persist(att);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // 8. PASSIVE CANVAS RENDERER (Single Source of Truth, Non-Destructive)
+    // =========================================================================
+    class CanvasRenderer {
+      constructor(canvasEl) {
+        this.canvas = canvasEl;
+        this.ctx = canvasEl.getContext('2d');
+      }
+
+      render(srcCanvas, tracks, identityManager) {
+        const vw = this.canvas.width, vh = this.canvas.height;
+        if (srcCanvas) {
+          this.ctx.drawImage(srcCanvas, 0, 0, vw, vh);
+        } else {
+          this.ctx.fillStyle = '#000';
+          this.ctx.fillRect(0, 0, vw, vh);
+        }
+
+        const fontSize = Math.max(12, Math.round(vw / 52));
+        this.ctx.font = 'bold ' + fontSize + 'px monospace';
+
+        const candidateTracks = tracks
+          // Include TEMPORARILY_LOST so a single missed detection (motion blur,
+          // brief occlusion, a low-confidence frame) doesn't make the box vanish
+          // outright — grace-tolerate up to 2 consecutive missed frames on the
+          // last known (smoothed) position before actually dropping the box.
+          .filter(t => (t.state === 'CONFIRMED' || t.state === 'CONFIRMING' || t.state === 'NEW' || t.state === 'TEMPORARILY_LOST') && (t.hasFreshDetection || t.missedFrames <= 2))
+          .map(t => {
+            const empId = identityManager.getPhysicalIdentity(t.trackId);
+            const box = t.smoothBbox || t.bbox;
+            return { track: t, empId, box, hits: t.hits };
+          })
+          .filter(item => item.empId || item.hits >= 2);
+
+        candidateTracks.sort((a, b) => {
+          if (a.empId && !b.empId) return -1;
+          if (!a.empId && b.empId) return 1;
+          return b.hits - a.hits;
+        });
+
+        // RENDER ALL TRACKS: Never drop or hide legitimate overlapping employees during crossings!
+        for (const item of candidateTracks) {
+          const t = item.track;
+          const empId = item.empId;
+          const idState = t.identityState || (empId ? IDENTITY_STATES.CONFIRMED : IDENTITY_STATES.UNKNOWN);
+
+          let color = '#00d2d3';
+          let bgBanner = 'rgba(0,210,211,0.92)';
+          let statusText = '';
+
+          if (idState === IDENTITY_STATES.CROSSING_LOCK) {
+            color = '#ff9f43';
+            bgBanner = 'rgba(255,159,67,0.95)';
+            statusText = '🔒 ';
+          } else if (idState === IDENTITY_STATES.UNCERTAIN) {
+            color = '#feca57';
+            bgBanner = 'rgba(254,202,87,0.95)';
+            statusText = '⚠️ ';
+          } else if (idState === IDENTITY_STATES.CONFIRMED || empId) {
+            color = '#2ed573';
+            bgBanner = 'rgba(46,213,115,0.92)';
+            statusText = '🔒 ';
+          } else if (idState === IDENTITY_STATES.CANDIDATE) {
+            color = '#48dbfb';
+            bgBanner = 'rgba(72,219,251,0.90)';
+            statusText = '';
+          } else {
+            color = '#70a1ff';
+            bgBanner = 'rgba(112,161,255,0.85)';
+            statusText = '';
+          }
+
+          const box = item.box;
+          const x1 = Math.max(0, Math.min(vw, box.x1));
+          const y1 = Math.max(0, Math.min(vh, box.y1));
+          const x2 = Math.max(0, Math.min(vw, box.x2));
+          const y2 = Math.max(0, Math.min(vh, box.y2));
+          const bw = x2 - x1, bh = y2 - y1;
+
+          this.ctx.strokeStyle = color;
+          this.ctx.lineWidth = Math.max(2, Math.round(vw / 280));
+          this.ctx.strokeRect(x1, y1, bw, bh);
+
+          const displayId = empId || t.candidateEmpId;
+          const label = displayId
+            ? `${statusText}${displayId}${empId ? '' : '?'} (${t.trackId})`
+            : `Analyzing...`;
+          const tw = this.ctx.measureText(label).width;
+          const bannerH = fontSize + 8;
+          const bannerY = (y1 - bannerH >= 2) ? (y1 - bannerH) : (y1 + 2);
+
+          this.ctx.fillStyle = bgBanner;
+          this.ctx.fillRect(x1, bannerY, tw + 10, bannerH);
+
+          this.ctx.fillStyle = '#000';
+          this.ctx.fillText(label, x1 + 5, bannerY + fontSize);
+        }
+
+        return candidateTracks.length;
+      }
+    }
+
+    // =========================================================================
+    // 9. STRUCTURED EVENT AUDIT SYSTEM
+    // =========================================================================
+    class EventSystem {
+      constructor() {
+        this.history = [];
+      }
+
+      reset() {
+        this.history = [];
+      }
+
+      log(empId, type, ts, detail, frameNum = 0, videoTime = 0, trackId = '') {
+        const evt = {
+          frame: frameNum,
+          videoTime: typeof videoTime === 'number' ? videoTime : 0,
+          trackId: trackId || 'NONE',
+          empId: empId || 'UNKNOWN',
+          type: type || 'EVENT',
+          state: type,
+          action: detail || '',
+          detail: detail || '',
+          ts: ts || Date.now()
+        };
+        this.history.push(evt);
+        renderEventLog();
+      }
+    }
+
+    // =========================================================================
+    // 10. UI RENDERING & DATA BINDINGS
+    // =========================================================================
+    function renderEmployeeTable() {
+      if (!identityDatabase || !els.empList) return;
+      const list = identityDatabase.getAllProfiles().sort((a, b) => a.empId.localeCompare(b.empId));
+      if (els.empEmpty) els.empEmpty.style.display = list.length ? 'none' : 'block';
+
+      let activeInCount = 0;
+      const curVTime = (els.video && !isNaN(els.video.currentTime)) ? els.video.currentTime : 0;
+
+      els.empList.innerHTML = list.map(emp => {
+        const att = attendanceManager ? attendanceManager.records.get(emp.empId) : null;
+        const isPresent = (att && att.state === 'CONFIRMED');
+        if (isPresent) activeInCount++;
+        const totalVideoSec = att
+          ? (isPresent && att.sessionStartVideoTime !== null
+              ? att.totalVideoSeconds + Math.max(0, curVTime - att.sessionStartVideoTime)
+              : att.totalVideoSeconds)
+          : 0;
+        const entries = att ? att.entries : 1;
+        const statusClass = isPresent ? 'in' : ((att && att.state === 'TEMPORARILY_LOST') ? 'lost' : 'out');
+        const statusLabel = isPresent ? 'ACTIVE IN' : ((att && att.state === 'TEMPORARILY_LOST') ? 'RECOVERING' : 'OUT');
+        const trackTag = isPresent && emp.currentTrackId ? ` [${emp.currentTrackId}]` : '';
+        const sampleCountTag = `<span style="font-size:10px;color:#888;margin-left:4px;">(${emp.gallerySamples.length} samples)</span>`;
+
+        const thumbHtml = emp.thumb
+          ? '<img src="' + emp.thumb + '" alt="' + emp.empId + '">'
+          : '<div style="width:36px;height:46px;background:#222;border-radius:4px;flex-shrink:0;"></div>';
+
+        return '<div class="empRow">' +
+          thumbHtml +
+          '<div><div class="eid">' + emp.empId + trackTag + sampleCountTag + '</div><span class="estat ' + statusClass + '">' + statusLabel + '</span></div>' +
+          '<div class="emeta">' + fmtDuration(totalVideoSec * 1000) + '<br>' + entries + 'x in</div>' +
+          '</div>';
+      }).join('');
+
+      if (els.empCountBadge) els.empCountBadge.textContent = activeInCount + ' IN';
+      if (els.statIn) els.statIn.textContent = String(activeInCount);
+      if (els.statOut) els.statOut.textContent = String(list.length - activeInCount);
+      if (els.statTotal) els.statTotal.textContent = String(list.length);
+    }
+
+    function renderEventLog() {
+      if (!eventSystem || !els.eventLog) return;
+      const visible = eventSystem.history.slice(-50).reverse();
+      if (els.evtEmpty) els.evtEmpty.style.display = visible.length ? 'none' : 'block';
+      els.eventLog.innerHTML = visible.map(ev => {
+        const tagClass = ev.type === 'ENTERED' ? 'enter' : ev.type === 'EXITED' ? 'exit' : ev.type === 'RE-ENTERED' ? 'reenter' : ev.type === 'RECOVERED' ? 'recover' : ev.type === 'BLOCKED' ? 'blocked' : 'enroll';
+        const fInfo = `[F${ev.frame || 0}|${(ev.videoTime || 0).toFixed(1)}s]`;
+        return '<div class="evtRow">' +
+          '<span class="et" style="min-width:70px;">' + fInfo + '</span>' +
+          '<span class="tag ' + tagClass + '">' + ev.type + '</span>' +
+          '<span class="emp">' + ev.empId + (ev.trackId && ev.trackId !== 'NONE' ? ` (${ev.trackId})` : '') + '</span>' +
+          '<span style="color:#777">' + (ev.detail || '') + '</span>' +
+          '</div>';
+      }).join('');
+      if (els.eventCountBadge) els.eventCountBadge.textContent = eventSystem.history.length + ' Events';
+    }
+
+    function renderStats(visibleCount) {
+      if (els.statPeople) els.statPeople.textContent = String(visibleCount);
+    }
+
+    // =========================================================================
+    // 11. MODEL CACHING & INITIALIZATION
+    // =========================================================================
+    const IDB_NAME = 'rknn_model_cache_v3';
+    const IDB_STORE = 'models';
+
+    function openModelDB() {
+      return new Promise((res, rej) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+        req.onsuccess = () => res(req.result);
+        req.onerror = () => rej(req.error);
+      });
+    }
+    async function getCachedModel(key) {
+      try {
+        const db = await openModelDB();
+        return new Promise(res => {
+          const tx = db.transaction(IDB_STORE, 'readonly');
+          const req = tx.objectStore(IDB_STORE).get(key);
+          req.onsuccess = () => res(req.result || null);
+          req.onerror = () => res(null);
+        });
+      } catch (e) { return null; }
+    }
+    async function setCachedModel(key, buffer) {
+      try {
+        const db = await openModelDB();
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(buffer, key);
+      } catch (e) { }
+    }
+
+    async function fetchModelWithRetry(urls, modelName) {
+      const urlList = Array.isArray(urls) ? urls : [urls];
+      for (const u of urlList) {
+        const cached = await getCachedModel(u);
+        if (cached && cached.byteLength > 50000) return cached;
+      }
+
+      let lastError = null;
+      for (const url of urlList) {
+        try {
+          setStatus('Downloading ' + modelName + ' model weights...');
+          const response = await fetch(url, { redirect: 'follow' });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          const buffer = await response.arrayBuffer();
+          if (buffer.byteLength < 50000) throw new Error('Corrupted model buffer');
+          await setCachedModel(url, buffer);
+          return buffer;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw new Error('Failed to load ' + modelName + ': ' + (lastError ? lastError.message : 'Mirror failed'));
+    }
+
+    function planYoloOutputs(results) {
+      for (const name of Object.keys(results)) {
+        const t = results[name];
+        if (t.dims && t.dims.length === 3) {
+          const [, d1, d2] = t.dims;
+          const channelsFirst = d1 < d2;
+          return { kind: 'fused', outputName: name, channelsFirst, numChannels: channelsFirst ? d1 : d2, numBoxes: channelsFirst ? d2 : d1 };
+        }
+      }
+      return { kind: 'fused', outputName: Object.keys(results)[0], channelsFirst: true, numChannels: 84, numBoxes: 8400 };
+    }
+
+    function letterbox(srcCanvas, size) {
+      const c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.fillStyle = 'rgb(114,114,114)';
+      ctx.fillRect(0, 0, size, size);
+      const scale = Math.min(size / srcCanvas.width, size / srcCanvas.height);
+      const nw = Math.round(srcCanvas.width * scale), nh = Math.round(srcCanvas.height * scale);
+      const padX = Math.floor((size - nw) / 2), padY = Math.floor((size - nh) / 2);
+      ctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, padX, padY, nw, nh);
+      return { canvas: c, scale, padX, padY };
+    }
+
+    function canvasToCHWFloatRGB(canvas, mean, std) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const { data } = ctx.getImageData(0, 0, w, h);
+      const out = new Float32Array(3 * w * h);
+      for (let i = 0; i < w * h; i++) {
+        const r = data[i * 4] / 255, g = data[i * 4 + 1] / 255, b = data[i * 4 + 2] / 255;
+        out[i] = mean ? (r - mean[0]) / std[0] : r;
+        out[w * h + i] = mean ? (g - mean[1]) / std[1] : g;
+        out[2 * w * h + i] = mean ? (b - mean[2]) / std[2] : b;
+      }
+      return out;
+    }
+
+    async function loadModels() {
+      try {
+        setModelStatus('yolo', 'loading');
+        setModelStatus('resnet', 'loading');
+        setStatus('Loading AI models in parallel…');
+
+        ort.env.wasm.numThreads = 2;
+        ort.env.wasm.simd = true;
+
+        const [yoloBuf, reidBuf] = await Promise.all([
+          fetchModelWithRetry(YOLO_MODEL_URLS, 'YOLO'),
+          fetchModelWithRetry(REID_MODEL_URLS, 'Person-ReID')
+        ]);
+
+        setStatus('Initializing neural inference engines…');
+        yoloSession = await ort.InferenceSession.create(yoloBuf, { executionProviders: ['wasm'] });
+        const dummy = new ort.Tensor('float32', new Float32Array(3 * YOLO_INPUT_SIZE * YOLO_INPUT_SIZE), [1, 3, YOLO_INPUT_SIZE, YOLO_INPUT_SIZE]);
+        const probe = await yoloSession.run({ [yoloSession.inputNames[0]]: dummy });
+        yoloOutputPlan = planYoloOutputs(probe);
+        setModelStatus('yolo', 'ready');
+
+        reidSession = await ort.InferenceSession.create(reidBuf, { executionProviders: ['wasm'] });
+        setModelStatus('resnet', 'ready');
+
+        // Instantiate pipeline components
+        detector = new PersonDetector(yoloSession, yoloOutputPlan);
+        tracker = new MultiObjectTracker();
+        snapshotCollector = new SnapshotCollector();
+        reidExtractor = new ReIDExtractor(reidSession);
+        identityPersistence = new IdentityPersistence();
+        identityDatabase = new IdentityDatabase(identityPersistence);
+        identityManager = new IdentityManager(identityDatabase);
+        attendanceManager = new AttendanceManager(identityPersistence);
+        renderer = new CanvasRenderer(els.overlay);
+        eventSystem = new EventSystem();
+
+        await identityDatabase.init();
+        await attendanceManager.init();
+
+        modelsReady = true;
+        setStatus('All models ready · Upload an office CCTV video to begin.');
+        if (els.btnMainAction) els.btnMainAction.disabled = false;
+        renderEmployeeTable();
+      } catch (err) {
+        console.error('Model loading failed:', err);
+        setStatus('Model load error: ' + err.message);
+        setModelStatus('yolo', 'error');
+        setModelStatus('resnet', 'error');
+      }
+    }
+
+    // =========================================================================
+    // 12. FRAME PROCESSING & TRACKING LOOP
+    // =========================================================================
+    let isTrackingRunning = false;
+    let isTrackingPaused = false;
+    let processingFrame = false;
+    let lastFpsTime = performance.now();
+    let frameCounter = 0;
+    let totalProcessedFrames = 0;
+
+    // The video is slowed to this rate during tracking so every frame is
+    // processed by the AI (no skipped frames). The recorded canvas output is
+    // 1/TRACKING_PLAYBACK_RATE times longer than the original video. The
+    // transcodeToNormalSpeed() step re-renders it at the inverse speed so
+    // the final download matches the original video duration.
+    const TRACKING_PLAYBACK_RATE = 0.5;
+
+    function syncOverlaySize() {
+      const vw = els.video.videoWidth || 640;
+      const vh = els.video.videoHeight || 480;
+      els.overlay.width = vw;
+      els.overlay.height = vh;
+    }
+
+    async function processFrame() {
+      const videoTime = els.video.currentTime || (totalProcessedFrames / 30.0);
+
+      // 1. Detection (PersonDetector with ByteTrack two-stage confidence spectrum)
+      const { detections, srcCanvas } = await detector.detect(els.video);
+
+      // 2. Tracking (MultiObjectTracker with Global Hungarian Bipartite Matching)
+      const tracks = tracker.update(detections, totalProcessedFrames);
+
+      // 3. Snapshot Collection & Quality Feature Buffering
+      const snapshotCandidates = snapshotCollector.collect(tracks, srcCanvas, totalProcessedFrames);
+      if (snapshotCandidates.length > 0) {
+        await snapshotCollector.extractFeatures(snapshotCandidates, srcCanvas, reidExtractor);
+      }
+
+      // 4. Online Auto-Enrollment, Sticky 1:1 Identity Manager & Crossing Lock
+      await identityManager.process(tracks, srcCanvas, reidExtractor, snapshotCollector, attendanceManager, eventSystem, totalProcessedFrames, videoTime);
+
+      // 5. Presence & Attendance with Video Timestamps (AttendanceManager)
+      attendanceManager.update(identityDatabase.getAllProfiles(), eventSystem, videoTime);
+
+      // 6. Canvas Rendering (Single Source of Truth)
+      const visibleCount = renderer.render(srcCanvas, tracks, identityManager);
+
+      // 7. UI Panels
+      renderEmployeeTable();
+      renderStats(visibleCount);
+      updateProgressBar();
+
+      totalProcessedFrames++;
+    }
+
+    async function trackingLoop() {
+      if (!isTrackingRunning) return;
+
+      if (!isTrackingPaused && !processingFrame && !els.video.paused && !els.video.ended && modelsReady) {
+        processingFrame = true;
+        try {
+          await processFrame();
+
+          frameCounter++;
+          const now = performance.now();
+          if (now - lastFpsTime >= 1000) {
+            const fps = Math.round((frameCounter * 1000) / (now - lastFpsTime));
+            if (els.statFps) els.statFps.textContent = String(fps);
+            frameCounter = 0;
+            lastFpsTime = now;
+          }
+        } catch (err) {
+          console.error('Frame error:', err);
+        }
+        processingFrame = false;
+      }
+
+      if (els.video.ended) {
+        setStatus('Video playback finished. All physical profiles preserved in database.');
+        isTrackingRunning = false;
+        els.btnMainAction.textContent = '↺ Restart Tracking';
+        els.btnMainAction.classList.remove('running', 'paused');
+        updateProgressBar(100, 'Completed (100%)');
+        if (els.progressBarStatus) els.progressBarStatus.textContent = 'Complete — finalizing video…';
+        stopRecording();
+      } else {
+        requestAnimationFrame(trackingLoop);
+      }
+    }
+
+    // =========================================================================
+    // 12.5 PROCESSING PROGRESS BAR
+    // =========================================================================
+    function updateProgressBar(forcePct = null, customStatus = null) {
+      if (!els.progressBarWrap) return;
+      const dur = els.video.duration;
+      const cur = els.video.currentTime;
+      if (!isFinite(dur) || dur <= 0) return;
+
+      const pct = (forcePct !== null) ? forcePct : Math.min(100, Math.max(0, (cur / dur) * 100));
+      if (els.progressBarFill) els.progressBarFill.style.width = pct.toFixed(1) + '%';
+      if (els.progressBarText) {
+        els.progressBarText.textContent = pct.toFixed(1) + '% · ' + fmtVideoTime(cur) + ' / ' + fmtVideoTime(dur) + ' (Frame ' + totalProcessedFrames + ')';
+      }
+      if (els.progressBarStatus) {
+        if (customStatus) {
+          els.progressBarStatus.textContent = customStatus;
+          if (forcePct !== null && forcePct >= 99.9) els.progressBarStatus.style.color = '#2ed573';
+          else if (customStatus === 'Paused') els.progressBarStatus.style.color = '#feca57';
+          else if (customStatus === 'Processing…') els.progressBarStatus.style.color = '#1dd1a1';
+        } else if (pct >= 99.9 || els.video.ended) {
+          els.progressBarStatus.textContent = 'Completed (100%)';
+          els.progressBarStatus.style.color = '#2ed573';
+        } else if (isTrackingPaused) {
+          els.progressBarStatus.textContent = 'Paused';
+          els.progressBarStatus.style.color = '#feca57';
+        } else if (isTrackingRunning) {
+          els.progressBarStatus.textContent = 'Processing…';
+          els.progressBarStatus.style.color = '#1dd1a1';
+        } else {
+          els.progressBarStatus.textContent = 'Ready';
+          els.progressBarStatus.style.color = '#888';
+        }
+      }
+    }
+
+    function resetProgressBar() {
+      if (!els.progressBarWrap) return;
+      if (els.video.src || els.video.currentSrc) {
+        els.progressBarWrap.classList.add('active');
+      } else {
+        els.progressBarWrap.classList.remove('active');
+      }
+      if (els.progressBarFill) els.progressBarFill.style.width = '0%';
+      const dur = (isFinite(els.video.duration) && els.video.duration > 0) ? els.video.duration : 0;
+      if (els.progressBarText) els.progressBarText.textContent = '0% · 00:00 / ' + fmtVideoTime(dur) + ' (Frame 0)';
+      if (els.progressBarStatus) {
+        els.progressBarStatus.textContent = 'Ready';
+        els.progressBarStatus.style.color = '#888';
+      }
+    }
+
+    // =========================================================================
+    // 12.6 PROCESSED VIDEO RECORDING (overlay canvas -> downloadable file)
+    // =========================================================================
+    function startRecording() {
+      try {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          try { mediaRecorder.stop(); } catch (e) { }
+        }
+        if (processedVideoUrl) {
+          URL.revokeObjectURL(processedVideoUrl);
+          processedVideoUrl = null;
+        }
+        processedVideoBlob = null;
+        recordedChunks = [];
+
+        if (els.btnDownloadVideo) {
+          els.btnDownloadVideo.disabled = true;
+          els.btnDownloadVideo.textContent = '🎬 Download Processed Video (.mp4) (available after run completes)';
+        }
+
+        if (!els.overlay.captureStream) {
+          console.warn('[RECORDER] canvas.captureStream() not supported in this browser — video download unavailable.');
+          return;
+        }
+
+        const stream = els.overlay.captureStream(30);
+        // Prioritize standard MP4 container types with H.264 / AVC codecs
+        const mimeCandidates = [
+          'video/mp4;codecs=avc1',
+          'video/mp4;codecs=avc1.42E01E',
+          'video/mp4;codecs=h264',
+          'video/mp4',
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm'
+        ];
+        let mimeType = '';
+        for (const m of mimeCandidates) {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
+            mimeType = m;
+            break;
+          }
+        }
+
+        mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 8_000_000 } : undefined);
+        recordingMimeType = mediaRecorder.mimeType || mimeType || 'video/mp4';
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onstop = finalizeRecording;
+        mediaRecorder.start(500);
+        console.log('[RECORDER] Recording started ->', recordingMimeType);
+      } catch (e) {
+        console.warn('[RECORDER-ERROR] Failed to start recording:', e);
+      }
+    }
+
+    function pauseRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        try { mediaRecorder.pause(); } catch (e) { }
+      }
+    }
+
+    function resumeRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'paused') {
+        try { mediaRecorder.resume(); } catch (e) { }
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch (e) { }
+      }
+    }
+
+    function discardRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.onstop = null;
+        try { mediaRecorder.stop(); } catch (e) { }
+      }
+      recordedChunks = [];
+      if (processedVideoUrl) {
+        URL.revokeObjectURL(processedVideoUrl);
+        processedVideoUrl = null;
+      }
+      processedVideoBlob = null;
+      if (els.btnDownloadVideo) {
+        els.btnDownloadVideo.disabled = true;
+        els.btnDownloadVideo.textContent = '🎬 Download Processed Video (.mp4) (available after run completes)';
+      }
+    }
+
+    // =========================================================================
+    // 12.7 POST-RECORDING TRANSCODE (Normal-Speed Output)
+    // =========================================================================
+    // The source video plays at TRACKING_PLAYBACK_RATE (0.5x) during tracking
+    // so the AI sees every frame. The raw canvas recording is therefore 2x
+    // longer than the original video and plays at half speed. This function
+    // re-renders the slow recording through a hidden video at (1 / rate) speed
+    // and re-captures it so the final download plays at the original video speed.
+    function transcodeToNormalSpeed(slowBlob) {
+      const speedFactor = 1 / TRACKING_PLAYBACK_RATE; // 2.0 when rate = 0.5
+      const outType = (recordingMimeType && recordingMimeType.includes('mp4')) ? recordingMimeType : 'video/webm';
+
+      if (els.progressBarStatus) {
+        els.progressBarStatus.textContent = 'Transcoding to normal speed… (this takes ~50% of video duration)';
+        els.progressBarStatus.style.color = '#ffa502';
+      }
+      if (els.btnDownloadVideo) {
+        els.btnDownloadVideo.disabled = true;
+        els.btnDownloadVideo.textContent = '⏳ Transcoding to normal speed…';
+      }
+
+      // Create a hidden source video that plays the slow recording at 2x
+      const srcVid = document.createElement('video');
+      srcVid.muted = true;
+      srcVid.playsInline = true;
+      srcVid.style.display = 'none';
+      document.body.appendChild(srcVid);
+
+      const blobUrl = URL.createObjectURL(slowBlob);
+      srcVid.src = blobUrl;
+
+      srcVid.onloadedmetadata = () => {
+        const tw = srcVid.videoWidth  || els.overlay.width  || 640;
+        const th = srcVid.videoHeight || els.overlay.height || 480;
+
+        // Offscreen canvas that mirrors the source video at 2x speed
+        const tc = document.createElement('canvas');
+        tc.width = tw; tc.height = th;
+        const tctx = tc.getContext('2d');
+
+        srcVid.playbackRate = speedFactor;
+
+        // Pick best supported mime for re-encoding
+        const mimeCandidates = [
+          'video/mp4;codecs=avc1', 'video/mp4;codecs=avc1.42E01E',
+          'video/mp4;codecs=h264', 'video/mp4',
+          'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'
+        ];
+        let tcMime = outType;
+        for (const m of mimeCandidates) {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
+            tcMime = m; break;
+          }
+        }
+
+        let tcRecorder;
+        try {
+          tcRecorder = new MediaRecorder(
+            tc.captureStream(30),
+            { mimeType: tcMime, videoBitsPerSecond: 8_000_000 }
+          );
+        } catch (e) {
+          // Fallback: no mimeType
+          tcRecorder = new MediaRecorder(tc.captureStream(30));
+        }
+
+        const tcChunks = [];
+        tcRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) tcChunks.push(e.data); };
+        tcRecorder.onstop = () => {
+          URL.revokeObjectURL(blobUrl);
+          document.body.removeChild(srcVid);
+
+          if (!tcChunks.length) {
+            // Transcode produced nothing — fall back to the slow original
+            console.warn('[TRANSCODE] No chunks produced, falling back to slow recording.');
+            _offerDownload(slowBlob);
+            return;
+          }
+
+          const finalBlob = new Blob(tcChunks, { type: tcMime });
+          _offerDownload(finalBlob);
+          console.log('[TRANSCODE] Normal-speed video ready, size=' + (finalBlob.size / 1048576).toFixed(2) + ' MB');
+        };
+
+        function drawLoop() {
+          if (!srcVid.ended && !srcVid.paused) {
+            tctx.drawImage(srcVid, 0, 0, tw, th);
+          }
+          if (!srcVid.ended) requestAnimationFrame(drawLoop);
+        }
+
+        srcVid.onended = () => {
+          tctx.drawImage(srcVid, 0, 0, tw, th); // flush last frame
+          setTimeout(() => { try { tcRecorder.stop(); } catch (e) {} }, 400);
+        };
+
+        tcRecorder.start(200);
+        srcVid.play().then(() => drawLoop()).catch(err => {
+          console.error('[TRANSCODE] playback failed', err);
+          try { tcRecorder.stop(); } catch (e) {}
+        });
+      };
+
+      srcVid.onerror = (e) => {
+        console.error('[TRANSCODE] source video error', e);
+        URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(srcVid);
+        _offerDownload(slowBlob); // fallback
+      };
+    }
+
+    function _offerDownload(blob) {
+      if (processedVideoUrl) URL.revokeObjectURL(processedVideoUrl);
+      processedVideoUrl = URL.createObjectURL(blob);
+      processedVideoBlob = blob;
+
+      if (els.btnDownloadVideo) {
+        els.btnDownloadVideo.disabled = false;
+        els.btnDownloadVideo.textContent = '⬇ Download Processed Video (.mp4) (' + (blob.size / 1048576).toFixed(1) + ' MB)';
+      }
+      if (els.progressBarStatus) {
+        els.progressBarStatus.textContent = 'Complete — Normal-speed MP4 ready to download';
+        els.progressBarStatus.style.color = '#2ed573';
+      }
+    }
+
+    function finalizeRecording() {
+      if (!recordedChunks.length) {
+        console.warn('[RECORDER] Stopped with no captured data.');
+        return;
+      }
+      const outType = (recordingMimeType && recordingMimeType.includes('mp4')) ? recordingMimeType : 'video/mp4';
+      const slowBlob = new Blob(recordedChunks, { type: outType });
+      console.log('[RECORDER] Raw recording ready (' + (slowBlob.size / 1048576).toFixed(2) + ' MB at ' + TRACKING_PLAYBACK_RATE + 'x speed). Starting transcode…');
+
+      // Transcode the half-speed canvas recording to normal video speed
+      transcodeToNormalSpeed(slowBlob);
+    }
+
+    function downloadProcessedVideo() {
+      if (!processedVideoUrl) return;
+      const filename = 'reid_processed_cctv_' + Date.now() + '.mp4';
+      const a = document.createElement('a');
+      a.href = processedVideoUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    // =========================================================================
+    // 13. CSV EXPORT & UI CONTROLS
+    // =========================================================================
+    function csvEscape(v) {
+      const s = String(v ?? '');
+      return (s.indexOf('"') !== -1 || s.indexOf(',') !== -1 || s.indexOf(String.fromCharCode(10)) !== -1) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+    function toCSV(rows) { return rows.map(function (r) { return r.map(csvEscape).join(','); }).join(String.fromCharCode(10)); }
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function exportEmployeeCSV() {
+      if (!identityDatabase || !attendanceManager) return;
+      const curVTime = (els.video && !isNaN(els.video.currentTime)) ? els.video.currentTime : 0;
+      const header = ['Employee ID', 'Status', 'Gallery Samples', 'Current Track', 'First Seen (Video Time)', 'Last Seen (Video Time)', 'Entry Count', 'Exit Count', 'Total Dwell Time'];
+      const rows = identityDatabase.getAllProfiles()
+        .sort((a, b) => a.empId.localeCompare(b.empId))
+        .map(e => {
+          const att = attendanceManager.records.get(e.empId);
+          const isPresent = (att && att.state === 'CONFIRMED');
+          const totalVideoSec = att
+            ? (isPresent && att.sessionStartVideoTime !== null
+                ? att.totalVideoSeconds + Math.max(0, curVTime - att.sessionStartVideoTime)
+                : att.totalVideoSeconds)
+            : 0;
+          return [
+            e.empId,
+            att ? att.state : 'OUT',
+            e.gallerySamples.length,
+            e.currentTrackId || 'NONE',
+            att ? fmtVideoTime(att.firstSeenVideoTime) : '00:00',
+            att ? fmtVideoTime(att.lastSeenVideoTime) : '00:00',
+            att ? att.entries : 1,
+            att ? att.exits : 0,
+            fmtDuration(totalVideoSec * 1000)
+          ];
+        });
+      downloadBlob(new Blob([toCSV([header, ...rows])], { type: 'text/csv' }), 'reid_sticky_attendance_' + Date.now() + '.csv');
+    }
+
+    function exportEventCSV() {
+      if (!eventSystem) return;
+      const header = ['Frame', 'Video Time (s)', 'Track ID', 'Employee ID', 'Event Type', 'Action Detail', 'Clock Time'];
+      const rows = eventSystem.history.map(ev => [
+        ev.frame || 0,
+        (ev.videoTime || 0).toFixed(2),
+        ev.trackId || 'NONE',
+        ev.empId,
+        ev.type,
+        ev.detail,
+        fmtClock(ev.ts)
+      ]);
+      downloadBlob(new Blob([toCSV([header, ...rows])], { type: 'text/csv' }), 'reid_sticky_events_' + Date.now() + '.csv');
+    }
+
+    function resetTrackingState() {
+      isTrackingRunning = false;
+      isTrackingPaused = false;
+      els.video.pause();
+      try { els.video.currentTime = 0; } catch (e) { }
+
+      totalProcessedFrames = 0;
+
+      // TEMPORARY tracking state resets every session — track IDs (T001, T002…)
+      // and their active mapping to identities are session-scoped by design.
+      if (tracker) tracker.reset();
+      if (snapshotCollector) snapshotCollector.reset();
+      if (identityManager) identityManager.reset();
+      if (eventSystem) eventSystem.reset();
+      discardRecording();
+
+      // PHYSICAL identities (EMP-xxxx) are intentionally NOT deleted here —
+      // they persist in IndexedDB across resets and browser refreshes. Only
+      // their live "currently visible" state is cleared, since no tracks are
+      // active anymore. Use "Clear All Identities" to actually delete them.
+      if (identityDatabase) {
+        for (const profile of identityDatabase.getAllProfiles()) {
+          profile.currentTrackId = null;
+        }
+      }
+      if (attendanceManager) {
+        const now = Date.now();
+        for (const att of attendanceManager.records.values()) {
+          if (att.state === 'CONFIRMED' && att.sessionStart) {
+            att.totalMs += (now - att.sessionStart);
+          }
+          att.state = 'OUT';
+          att.currentTrackId = null;
+          att.sessionStart = null;
+          attendanceManager.persist(att);
+        }
+      }
+
+      renderEmployeeTable();
+      renderEventLog();
+      renderStats(0);
+      resetProgressBar();
+
+      const sctx = els.overlay.getContext('2d');
+      sctx.fillStyle = '#000';
+      sctx.fillRect(0, 0, els.overlay.width, els.overlay.height);
+
+      els.btnMainAction.textContent = '▶ Start Video Tracking';
+      els.btnMainAction.classList.remove('running', 'paused');
+      setStatus('Tracking reset. Enrolled identities preserved.');
+    }
+
+    async function clearAllIdentities() {
+      const count = identityDatabase ? identityDatabase.getAllProfiles().length : 0;
+      const ok = confirm(
+        count > 0
+          ? `This will permanently delete all ${count} enrolled physical identities and their attendance history. This cannot be undone. Continue?`
+          : 'This will permanently clear the identity database. Continue?'
+      );
+      if (!ok) return;
+
+      resetTrackingState();
+      if (identityDatabase) identityDatabase.reset();
+      if (attendanceManager) attendanceManager.reset();
+      if (identityPersistence) await identityPersistence.clearAll();
+
+      renderEmployeeTable();
+      renderEventLog();
+      setStatus('All enrolled identities cleared.');
+    }
+
+    function bindControls() {
+      if (els.btnMainAction) {
+        els.btnMainAction.onclick = () => {
+          if (!els.video.src && !els.video.currentSrc) {
+            alert('Please load a CCTV video file first.');
+            els.videoUpload.click();
+            return;
+          }
+          if (!modelsReady) {
+            alert('AI models are still loading. Please wait a moment.');
+            return;
+          }
+
+          if (!isTrackingRunning) {
+            isTrackingRunning = true;
+            isTrackingPaused = false;
+
+            els.video.playbackRate = TRACKING_PLAYBACK_RATE;
+
+            els.video.play();
+            els.btnMainAction.textContent = '⏸ Pause Tracking';
+            els.btnMainAction.classList.add('running');
+            els.btnMainAction.classList.remove('paused');
+            if (els.progressBarWrap) els.progressBarWrap.classList.add('active');
+            updateProgressBar(null, 'Processing…');
+            startRecording();
+            setStatus('Tracking Active · Processing live video feed with Database-Backed Multi-Sample Identity Engine…');
+            trackingLoop();
+          } else if (!isTrackingPaused) {
+            isTrackingPaused = true;
+            els.video.pause();
+            els.btnMainAction.textContent = '▶ Resume Tracking';
+            els.btnMainAction.classList.remove('running');
+            els.btnMainAction.classList.add('paused');
+            updateProgressBar(null, 'Paused');
+            pauseRecording();
+            setStatus('Tracking Paused.');
+          } else {
+            isTrackingPaused = false;
+            els.video.playbackRate = TRACKING_PLAYBACK_RATE;
+            els.video.play();
+            els.btnMainAction.textContent = '⏸ Pause Tracking';
+            els.btnMainAction.classList.add('running');
+            els.btnMainAction.classList.remove('paused');
+            updateProgressBar(null, 'Processing…');
+            resumeRecording();
+            setStatus('Tracking Resumed.');
+          }
+        };
+      }
+
+      if (els.btnReset) {
+        els.btnReset.onclick = resetTrackingState;
+      }
+
+      if (els.btnClearIdentities) {
+        els.btnClearIdentities.onclick = clearAllIdentities;
+      }
+
+      if (els.btnDownloadVideo) {
+        els.btnDownloadVideo.onclick = downloadProcessedVideo;
+      }
+
+      if (els.videoUpload) {
+        els.videoUpload.onchange = (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+
+          const url = URL.createObjectURL(file);
+          els.video.src = url;
+          els.video.load();
+          if (els.uploadName) els.uploadName.textContent = file.name + ' (' + (file.size / 1048576).toFixed(1) + ' MB)';
+
+          els.video.onloadedmetadata = () => {
+            syncOverlaySize();
+            resetTrackingState();
+            if (els.progressBarWrap) els.progressBarWrap.classList.add('active');
+            resetProgressBar();
+            setStatus('Video Loaded: ' + file.name + ' (' + els.video.videoWidth + 'x' + els.video.videoHeight + ', ' + fmtVideoTime(els.video.duration) + ')');
+
+            els.video.currentTime = 0.1;
+            els.video.onseeked = () => {
+              const sctx = els.overlay.getContext('2d');
+              sctx.drawImage(els.video, 0, 0, els.overlay.width, els.overlay.height);
+              els.video.onseeked = null;
+            };
+          };
+        };
+      }
+
+      if (els.btnExportAttendanceCsv) els.btnExportAttendanceCsv.onclick = exportEmployeeCSV;
+      if (els.btnExportEventCsv) els.btnExportEventCsv.onclick = exportEventCSV;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      bindControls();
+      renderStats(0);
+      renderEmployeeTable();
+      renderEventLog();
+      loadModels();
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,71 @@
+# ==============================================================================
+# Git Ignore Configuration for CCTV Person Tracking & Re-ID System
+# ==============================================================================
+
+# --- CCTV & Video Footage (Privacy & GitHub 100MB File Size Protection) ---
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.flv
+Videos/
+Video Project.mp4
+cctv_tracking/*.mp4
+
+# --- Deep Learning Model Checkpoints & Large Weights ---
+*.pt
+*.pth
+*.onnx
+*.weights
+*.bin
+*.tflite
+
+# --- Python Environment & Bytecode Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.cache/
+
+# --- Virtual Environments ---
+venv/
+.venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Database & Local Storage Files ---
+.cctv_tracking_db/
+employee_registry.json
+*.sqlite3
+*.db
+
+# --- Operating System & Editor Metadata ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# --- Temporary Logs & Debug Dumps ---
+*.log
+scratch/*.log
